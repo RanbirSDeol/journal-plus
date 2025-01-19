@@ -92,7 +92,6 @@ class DreamHandler:
     
     # | Local Functions |
     def print_panel(self, content, color, style, width):
-        logs.log("DEBUG", f"{color}, {content}, {style}, {width}")
         panel = Panel(f"[{color}]{content}[/{color}]", style=f"bold {style}", width=width)
         console.print(panel)
     def print_title(self):
@@ -197,7 +196,7 @@ class DreamHandler:
                     console.print(stats_table)
                     console.print(content_panel)
                 except Exception as e:
-                    logs.log("ERROR", f"Error reading file: {os.path.basename(dream_file)} - {str(e)}")
+                    logs.log("ERROR", f"[bold red]Error reading file: {os.path.basename(dream_file)} - {str(e)}[/bold red]")
 
             # Create a horizontal table for the commands
             command_table = Table(
@@ -384,7 +383,7 @@ class DreamHandler:
                             console.print(content_panel)
 
                         except Exception as e:
-                            logs.log("ERROR", f"Error reading file: {os.path.basename(search_dream_file)} - {str(e)}")
+                            logs.log("ERROR", f"[bold red]Error reading file: {os.path.basename(search_dream_file)} - {str(e)}[/bold red]")
 
                         # Create a horizontal table for the commands
                         command_table = Table(
@@ -427,21 +426,14 @@ class DreamHandler:
                 TerminalClear.clear()
                 break
         pass
-    def run(self):
-        """Main loop for the Dream journal."""
-        self.navigate()
- 
-    # Function to create a dream
     def create_dream(self):
         """Create a new dream entry and save it in the desired folder structure."""
-        
-        
-        
+
         # Prompt the user for the date in MM/DD/YYYY format using Rich
         while True:
-            date_input = Prompt.ask("Enter the date of the dream (MM/DD/YYYY) or ('q' to quit creation):")
+            self.print_panel("Enter the date of the dream (MM/DD/YYYY) or ('q' to quit creation):", "bold white", "white", 75)
+            date_input = Prompt.ask("", show_default=False)
             if date_input.lower() == 'q':
-                console.print("[bold red]Dream creation aborted.[/bold red]")
                 return
             
             # Validate the date format
@@ -452,11 +444,11 @@ class DreamHandler:
                 year = date_obj.year
                 break  # Exit the loop if the date is valid
             except ValueError:
-                console.print("[bold red]Invalid date format. Please enter the date in YYYY/MM/DD format (e.g., 2025/01/18).[/bold red]")
+                self.print_panel(f"Invalid Date: ", "bold red", "red", 75)
 
         # Title panel
         title_panel = Panel(
-            Text("Enter a title for your dream entry:", justify="center"),
+            Text("Enter a title for your dream entry:", justify="left"),
             title="Dream Title",
             border_style="white",
             width=75,
@@ -466,7 +458,7 @@ class DreamHandler:
         
         # Dream type panel
         dream_type_panel = Panel(
-            Text("Vague | Normal | Vivid | Vivimax | Lucid | Nightmare | No Recall:", justify="center"),
+            Text("Vague | Normal | Vivid | Vivimax | Lucid | Nightmare | No Recall:", justify="left"),
             title="Dream Type",
             border_style="white",
             width=75,
@@ -476,7 +468,7 @@ class DreamHandler:
         
         # Dream technique panel
         technique_panel = Panel(
-            Text("None | WILD | DILD | MILD | SSILD:", justify="center"),
+            Text("None | WILD | DILD | MILD | SSILD:", justify="left"),
             title="Dream Technique",
             border_style="white",
             width=75,
@@ -486,7 +478,7 @@ class DreamHandler:
 
         # Sleep cycle panel
         sleep_cycle_panel = Panel(
-            Text("Enter a sleep cycle (Regular | Nap | WBTB):", justify="center"),
+            Text("Enter a sleep cycle (Regular | Nap | WBTB):", justify="left"),
             title="Sleep Cycle",
             border_style="white",
 
@@ -497,12 +489,13 @@ class DreamHandler:
         
         # Content panel
         content_panel = Panel(
-            Text("Would you like to open and edit the dream entry (y / n)?", justify="center"),
+            Text("Would you like to open and edit the dream entry (y / n)?", justify="left"),
             title="Edit Entry",
             border_style="white",
             width=75,
         )
         console.print(content_panel)
+        
         edit_choice = Prompt.ask("", default="n", show_default=False)
 
         # Define the folder structure: year/month_name/day
@@ -518,39 +511,38 @@ class DreamHandler:
         # Create a file name based on the title and timestamp
         file_name = f"{title.replace(' ', '_')}_{time_stamp}.txt"
         
+        # Make sure we the proper format
         entry_empty = "[ Dream Entry ]\n───────────────────────────────────────────────────────────────────────\n[]"
         
         # Create a new Dream object
         dream = Dream(
             title=title,
-            dream_type=dream_type,  # Dynamic now
-            technique=technique,    # Dynamic now
-            sleep_cycle=sleep_cycle,  # Dynamic now
-            entry=entry_empty,  # Static for now, can be updated
+            dream_type=dream_type,  # Dynamic
+            technique=technique,    # Dynamic
+            sleep_cycle=sleep_cycle,  # Dynamic
+            entry=entry_empty,  # Static
             date=f"{day} {month_name}, {year}",  # Format date as "Month Day, Year"
-            date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Creation tag
         )
         
+        # Open the file
         TEXT_EDITOR = ["emacs", "-nw", os.path.join(folder_path, file_name)]
 
         # Write the formatted dream entry to the file
         with open(os.path.join(folder_path, file_name), 'w') as dream_file:
             dream_file.write(dream.format_dream_entry())
-
-        if edit_choice.lower() == 'y':
-            console.print(f"[bold green]Opening {file_name} for editing...[/bold green]")
-            # Define the command to open the file in Emacs in the terminal
             
+        # If they want to edit it
+        if edit_choice.lower() == 'y':
             try:
                 subprocess.run(TEXT_EDITOR, check=True)
             except subprocess.CalledProcessError as e:
-                console.print(f"[bold red]Failed to open {file_name} in Emacs.[/bold red]")
+                logs.log("ERROR", f"[bold red]Failed to open {file_name} in Emacs.[/bold red]")
             except FileNotFoundError as e:
-                console.print("[bold red]Emacs is not installed or not found.[/bold red]")
-        
-        # Display success message using Rich
-        console.print(Panel(f"Dream saved successfully at [bold green]{folder_path}[/bold green]", style="bold green"))
-        console.print(f"File name: [bold yellow]{file_name}[/bold yellow]")
+                logs.log("ERROR", "[bold red]Emacs is not installed or not found.[/bold red]")
+    def run(self):
+        """Main loop for the Dream journal."""
+        self.navigate()
     
     # Function to open dream using our editor
     def edit_dream(self, path):
