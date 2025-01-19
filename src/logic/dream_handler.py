@@ -426,6 +426,26 @@ class DreamHandler:
                 TerminalClear.clear()
                 break
         pass
+    
+    def edit_dream(self, path):
+        """
+        Edit the dream journal file using Emacs in the terminal.
+        """
+        
+        if os.path.exists(path):
+            # Define the command to open the file in Emacs in the terminal
+            TEXT_EDITOR = ["emacs", "-nw", path]
+            
+            try:
+                # Use subprocess to open the file in Emacs
+                subprocess.run(TEXT_EDITOR, check=True)
+            except subprocess.CalledProcessError as e:
+                logs.log("ERROR", f"[bold red]Failed to open {path} in Emacs.[/bold red]")
+            except FileNotFoundError as e:
+                logs.log("ERROR", "[bold red]Emacs is not installed or not found.[/bold red]")
+        else:
+            console.print(f"[bold red]The file {path} does not exist.[/bold red]")
+    
     def create_dream(self):
         """Create a new dream entry and save it in the desired folder structure."""
 
@@ -447,51 +467,54 @@ class DreamHandler:
                 self.print_panel(f"Invalid Date: ", "bold red", "red", 75)
 
         # Title panel
+        clear()
+        self.print_panel("Dream Title", "bold white", "white", 25)
         title_panel = Panel(
             Text("Enter a title for your dream entry:", justify="left"),
-            title="Dream Title",
-            border_style="white",
-            width=75,
+            style="bold white",
+            width=40,
         )
         console.print(title_panel)
         title = Prompt.ask("", default="Untitled Dream", show_default=False)
         
         # Dream type panel
+        clear()
+        self.print_panel("Dream Type", "bold white", "white", 25)
         dream_type_panel = Panel(
             Text("Vague | Normal | Vivid | Vivimax | Lucid | Nightmare | No Recall:", justify="left"),
-            title="Dream Type",
-            border_style="white",
+            style="bold white",
             width=75,
         )
         console.print(dream_type_panel)
         dream_type = Prompt.ask("", default="Lucid", show_default=False)
         
         # Dream technique panel
+        clear()
+        self.print_panel("Dream Technique", "bold white", "white", 25)
         technique_panel = Panel(
             Text("None | WILD | DILD | MILD | SSILD:", justify="left"),
-            title="Dream Technique",
-            border_style="white",
-            width=75,
+            style="bold white",
+            width=45,
         )
         console.print(technique_panel)
         technique = Prompt.ask("", default="WILD", show_default=False)
 
         # Sleep cycle panel
+        clear()
+        self.print_panel("Sleep Cycle", "bold white", "white", 25)
         sleep_cycle_panel = Panel(
             Text("Enter a sleep cycle (Regular | Nap | WBTB):", justify="left"),
-            title="Sleep Cycle",
-            border_style="white",
-
-            width=75,
+            style="bold white",
+            width=50,
         )
         console.print(sleep_cycle_panel)
         sleep_cycle = Prompt.ask("", default="REM", show_default=False)
         
         # Content panel
+        clear()
         content_panel = Panel(
-            Text("Would you like to open and edit the dream entry (y / n)?", justify="left"),
-            title="Edit Entry",
-            border_style="white",
+            Text("Would you like to open and edit the dream entry (y / n)?", justify="center"),
+            style="bold white",
             width=75,
         )
         console.print(content_panel)
@@ -524,49 +547,19 @@ class DreamHandler:
             date=f"{day} {month_name}, {year}",  # Format date as "Month Day, Year"
             date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S") # Creation tag
         )
-        
-        # Open the file
-        TEXT_EDITOR = ["emacs", "-nw", os.path.join(folder_path, file_name)]
 
-        # Write the formatted dream entry to the file
-        with open(os.path.join(folder_path, file_name), 'w') as dream_file:
+        # Write file
+        new_path = os.path.join(folder_path, file_name)
+        with open(new_path, 'w') as dream_file:
             dream_file.write(dream.format_dream_entry())
             
-        # If they want to edit it
+        # Open file if 'y'
         if edit_choice.lower() == 'y':
-            try:
-                subprocess.run(TEXT_EDITOR, check=True)
-            except subprocess.CalledProcessError as e:
-                logs.log("ERROR", f"[bold red]Failed to open {file_name} in Emacs.[/bold red]")
-            except FileNotFoundError as e:
-                logs.log("ERROR", "[bold red]Emacs is not installed or not found.[/bold red]")
+            self.edit_dream(new_path)
+    
     def run(self):
         """Main loop for the Dream journal."""
         self.navigate()
-    
-    # Function to open dream using our editor
-    def edit_dream(self, path):
-        """
-        Edit the dream journal file using Emacs in the terminal.
-        """
-        
-        
-        
-        if os.path.exists(path):
-            console.print(f"[bold green]Opening {path} for editing in Emacs...[/bold green]")
-            
-            # Define the command to open the file in Emacs in the terminal
-            TEXT_EDITOR = ["emacs", "-nw", path]
-            
-            try:
-                # Use subprocess to open the file in Emacs
-                subprocess.run(TEXT_EDITOR, check=True)
-            except subprocess.CalledProcessError as e:
-                console.print(f"[bold red]Failed to open {path} in Emacs.[/bold red]")
-            except FileNotFoundError as e:
-                console.print("[bold red]Emacs is not installed or not found.[/bold red]")
-        else:
-            console.print(f"[bold red]The file {path} does not exist.[/bold red]")
  
     # Function to sync our dreams
     def sync(self):
