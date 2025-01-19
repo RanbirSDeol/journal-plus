@@ -48,7 +48,7 @@ def print_title():
     console.print(title)
 
 def print_prompt():
-    prompt_text = "[white]Enter a command[/white] (type [bold green]'help'[/bold green] for commands)"
+    prompt_text = "[bold white]Enter a command[/bold white] (type [bold green]'help'[/bold green] for commands)"
     prompt = Panel(prompt_text, width=47)
     console.print(prompt)
     

@@ -37,6 +37,7 @@ with open(settings_file_path, 'r') as file:
 SMTP_SERVER = config['smtp']['server']
 SMTP_PORT = config['smtp']['port']
 JOURNAL_DIR = config['directories']['dreams']
+SYNC_SPEED = 0.05 # Change to settings | Slow it is, the more reliable the sync is
 
 # A list of all the months, to be used to convert number month to word month
 MONTHS = [
@@ -99,11 +100,11 @@ class DreamHandler:
         console.print(title)
     def print_prompt(self, command):
         if not command:
-            prompt_text = "[white]Command: [/white]"
+            prompt_text = "[bold white]Command: [/bold white]"
             prompt = Panel(prompt_text, width=14)
             console.print(prompt)
         else:
-            prompt_text = f"[white]Command: {command} [/white]"
+            prompt_text = f"[bold white]Command: {command} [/bold white]"
             prompt = Panel(prompt_text, width=14)
             console.print(prompt)
     def print_command(self, user_command):
@@ -119,10 +120,10 @@ class DreamHandler:
         
         # Our files
         dream_files = self.list_files(self.journal_dir)[::-1]
-        
+
         # Make sure we have dream files
         if not dream_files:
-            self.print_panel("No Dream Entries Found!", "bold yellow", "yellow", 25)
+            self.print_panel("No Dream Entries Found!", "bold yellow", "yellow", 75)
             index = 0
         else:
             index = len(dream_files) - 1
@@ -133,6 +134,10 @@ class DreamHandler:
         while True:
             
             clear()
+            
+            # Make sure we have dream files
+            if not dream_files:
+                self.print_panel("No Dream Entries Found!", "bold yellow", "yellow", 75)
             
             # Wrap index around if it goes out of bounds
             index = index % len(dream_files) if dream_files else 0
@@ -269,6 +274,7 @@ class DreamHandler:
                 sync_confirm = Prompt.ask("", show_default=False)
                 
                 if sync_confirm == "y":
+                    clear()
                     self.print_prompt(user_command)
                     self.sync()  # Proceed with syncing
                     dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
@@ -557,11 +563,6 @@ class DreamHandler:
         if edit_choice.lower() == 'y':
             self.edit_dream(new_path)
     
-    def run(self):
-        """Main loop for the Dream journal."""
-        self.navigate()
- 
-    # Function to sync our dreams
     def sync(self):
         """
         Sync loads a .txt file and reads all the contents. It then
@@ -632,7 +633,7 @@ class DreamHandler:
 
                 # Loop through the entries, and create a journal .txt for each
                 for entry in organized_entries:
-                    time.sleep(0.05) 
+                    time.sleep(SYNC_SPEED) 
                     try:
                         entry["Body"] = entry["Body"].replace(
                             "[ Dream Entry ]",
@@ -675,15 +676,18 @@ class DreamHandler:
                         # For every file in the folder, remove their timestamp part and check
                         existing_files = os.listdir(folder_path)
 
-                        # Loop through each file in the folder and remove the timestamp part
-                        existing_file_base_names = [ "_".join(file.split("_")[:-1]) for file in existing_files if file.endswith('.txt')]
+                        # This handles the dream sync sort logic somehow :p
+                        existing_file_base_names = [
+                            file[:-27] if len(file) > 27 and file.endswith('.txt') else file
+                            for file in existing_files
+                        ]
 
                         # Check if the file name without the timestamp already exists
-                        file_name_without_timestamp = "_".join(file_name.split("_")[:-1])  # Remove the timestamp part
+                        file_name_without_timestamp = (entry['Title']).replace(' ', '_')
+
 
                         if file_name_without_timestamp in existing_file_base_names:
-                            logs.log("INFO", f"File with the base name '{file_name_without_timestamp}' already exists. Skipping creation.")
-                            continue  # Skip this entry if a file with the same base name exists
+                            continue
                         
                         # Write the formatted dream entry to the file
                         with open(os.path.join(folder_path, file_name), 'w') as dream_file:
@@ -698,10 +702,14 @@ class DreamHandler:
                     progress.update(task, advance=1)
 
         except Exception as e:
-            logs.log("ERROR", f"Failed to sync dreams: {e}")
+            logs.log("ERROR", f"[bold red]Failed to sync dreams[/bold red]: {e}")
 
         # Log the total files created
-        logs.log("SUCCESS", f"Sync.txt Was Loaded! Files Created: {files_created_count}")
+        logs.log("SUCCESS", f"[bold green]Sync.txt Was Loaded! Files Created [/bold green]: {files_created_count}")
+    
+    def run(self):
+        """Main loop for the Dream journal."""
+        self.navigate()
     
     # Deletion of a dream
     def delete_dream(self, file_path):
