@@ -7,7 +7,7 @@ __version__ = "1.0.0"
 from utils.imports import *
 
 # Constants
-PROGRAM_TITLE = f"Journal Hub"  # Global program title
+PROGRAM_TITLE = f"Journal Plus"  # Global program title
 LOADING_SPEED = 0.00005
 
 # Function to load our settings json file

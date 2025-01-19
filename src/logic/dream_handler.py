@@ -12,14 +12,30 @@ import subprocess
 import tty
 import time
 import random
+import json
 from datetime import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 
 # Classes
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.imports import *
-
-# Dream class
 from .models.dream import Dream
+
+# Settings.json
+script_dir = os.path.dirname(os.path.abspath(__file__))
+settings_file_path = os.path.join(script_dir, '..', 'settings.json')
+
+# Load the JSON file
+with open(settings_file_path, 'r') as file:
+    config = json.load(file)
+
+# Load our settings.json
+SMTP_SERVER = config['smtp']['server']
+SMTP_PORT = config['smtp']['port']
 
 # A list of all the months, to be used to convert number month to word month
 MONTHS = [
@@ -53,11 +69,12 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Construct the path to sync-dream.txt in the grandparent directory
 sync_file_path = os.path.join(script_dir, '..', '..', 'data', 'sync-dream.txt')
+backup_file_path = os.path.join(script_dir, '..', '..', 'data', 'backups')
 
 # Use the dynamically constructed path for the SYNC_FILE
 SYNC_FILE = sync_file_path
+BACKUP_DIRECTORY = backup_file_path
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
 settings_path = os.path.join(script_dir, '..', 'settings.json')
 # Pass the dynamically constructed path to the Logger
 logs = Logger(settings_file=settings_path)
@@ -309,7 +326,7 @@ class DreamHandler:
 
                 # Loop through the entries, and create a journal .txt for each
                 for entry in organized_entries:
-                    time.sleep(0.005) 
+                    time.sleep(0.05) 
                     try:
                         entry["Body"] = entry["Body"].replace(
                             "[ Dream Entry ]",
@@ -326,7 +343,7 @@ class DreamHandler:
                         month_name = date_obj.strftime("%B")
                         
                         # Generate timestamp for the file
-                        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                         
                         # Create a file name based on the title and timestamp
                         file_name = f"{(entry['Title']).replace(' ', '_')}_{time_stamp}.txt"
@@ -380,7 +397,7 @@ class DreamHandler:
         # Log the total files created
         logs.log("SUCCESS", f"Sync.txt Was Loaded! Files Created: {files_created_count}")
     
-    # Deletion of a dream  [X]
+    # Deletion of a dream
     def delete_dream(self, file_path):
         """Delete a dream entry by file path."""
         if os.path.exists(file_path):
@@ -388,82 +405,8 @@ class DreamHandler:
             print(f"Deleted: {file_path}")
         else:
             print(f"File not found: {file_path}")
-        """
-        Formatting a date into the numerical version:
-        eg. [Day Month, Year] -> [YYYY/MM/DD] (1) | Or [Month Day, Year] -> [YYYY/MM/DD] (2)
-        (1) is used for creation, (2) is used for the syncing [backup file is in month day]
-        """
-
-        try: 
-
-            # Splitting date using ','
-            parts = date_unformatted.split(',')
-
-            # Variables to store our formatted day, month, and year
-            day = ''
-            month = ''
-            year = ''
-
-            # Checking if we have a split of 2 parts [Day Month, Year]
-            if len(parts) == 2:
-                # We have [Month Day, Year]
-                
-                if flipped:
-                    # Getting the day and month, also removing the starting '('
-                    day_month = parts[0].strip().removeprefix('(')
-                    # Getting the year
-                    year = parts[1].strip()
-
-                    print(year)
-                    
-                    # Extracting day and month
-                    day_month_parts = day_month.split()
-
-                    # Checking if we have two parts
-                    if len(day_month_parts) == 2:
-                        # Our month
-                        month = day_month_parts[0].strip()
-                        # Our day
-                        day = day_month_parts[1].strip() 
-                        # Checking if we have a valid month
-                        if month in MONTHS_REVERSED:
-                            if day.isdigit() and 1 <= int(day) <= 31:
-                                formatted_date = f"{year}-{MONTHS_REVERSED[month]}-{day}"
-                                return formatted_date
-                            
-                # We have [Day Month, Year]
-                else:
-                    # Getting the day and month, and removing the starting '('
-                    day_month = parts[0].strip().removeprefix('(')
-                    # The year, minus a ')' bracket at the end
-                    if bracketBug:
-                        year = parts[1].strip()[:-1]
-                    else:
-                        year = parts[1].strip()
-                    
-                    # Extracting day and month
-                    day_month_parts = day_month.split()
-
-                    # Checking if we have a valid split
-                    if len(day_month_parts) == 2:
-                        # Day part
-                        day = day_month_parts[0].strip()  
-                        # Month part  
-                        month = day_month_parts[1].strip()
-                        
-                        # Checking if this month exists
-                        if month in MONTHS_REVERSED:
-                            if day.isdigit() and 1 <= int(day) <= 31:
-                                formatted_date = day + "-" + str(MONTHS_REVERSED[month]) + "-" + year
-                                return formatted_date
-
-        # Return error and 'DirtyEntry', also log the error
-        except Exception as e:
-            return 'DirtyEntry'
-        
-        return 'DirtyEntry'
      
-    # Get the date from a file [X]
+    # Get the date from a file
     def extract_date_from_file(self, file_path):
         """
         A function that extracts the dream date from a file
@@ -501,7 +444,7 @@ class DreamHandler:
             print("───────────────────────────────────────────────────────────────────────")
             return 'DirtyEntry' 
     
-    # Formats the date [X]
+    # Formats the date
     def date_formatter(self, date_unformatted, flipped, bracketBug):
         """
         Formatting a date into the numerical version:
@@ -587,6 +530,7 @@ class DreamHandler:
         # Throw an error and return 'DirtyEntry'
         return 'DirtyEntry'
     
+    # Lists all the files in a directory
     def list_files(self, directory):
         """
         A function to list all text files in a directory structure.
@@ -619,7 +563,7 @@ class DreamHandler:
                         # Default to the earliest possible date if parsing fails
                         file_date = datetime.min
 
-                    # Get the file's creation time
+                    # Get the file's creation time (or modification time if needed)
                     creation_time = os.path.getctime(file_path)
 
                     # Append the file with its metadata
@@ -627,7 +571,7 @@ class DreamHandler:
 
         # Sort files:
         # - By file date (newest to oldest)
-        # - By creation time (latest to earliest within the same date)
+        # - By creation time (latest to earliest within the same date, includes microseconds)
         files.sort(
             key=lambda entry: (entry[0], -entry[1]),  # Negate creation time for descending order
             reverse=True
@@ -635,6 +579,87 @@ class DreamHandler:
 
         # Return only the file paths in the sorted order
         return [file_path for _, _, file_path in files]
+
+    def send_email(self, file_path):
+        '''
+        Sends the specified file via email.
+        '''
+
+        # Getting the email for the sender
+        SENDER_EMAIL = input("Enter the email of the sender: ")
+        # Getting the email for the reciever
+        RECIPIENT_EMAIL = input("Enter the email of the reciever: ")
+
+        # Google generated password, getting the sender_email is just extra security
+        # This is a throwaway email
+        SENDER_PASSWORD = 'zkgz avdi irab hwjg'
+
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = RECIPIENT_EMAIL
+        msg['Subject'] = 'Dream Vault Backup'
+
+        body = 'Please find the attached backup of your dream journal.'
+        msg.attach(MIMEText(body, 'plain'))
+
+        attachment = open(file_path, 'rb')
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename={os.path.basename(file_path)}')
+        msg.attach(part)
+        attachment.close()
+
+        try:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, msg.as_string())
+            server.quit()
+            print("hello world")
+        except Exception as e:
+            logs.log("ERROR", f"[red]Failed to send email[/red]: {e}")
+
+    def backup(self):
+        '''
+        Backs up the dream journal files and sends the backup via email.
+        '''
+
+        # Let us get all the dream files
+        dream_files = self.list_files(self.journal_dir)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # Adjusted timestamp format
+        backup_file_name = f"[{timestamp}]_Dream_Backup.txt"
+        output_file_path = os.path.join(BACKUP_DIRECTORY, backup_file_name)
+
+        with open(output_file_path, 'a') as output_file:
+            output_file.write("==============================\n")
+
+        # Checking if we have any dreams
+        if not dream_files:
+            console.log(f"\n[bold yellow]No Dream Entries Found[/bold yellow]\n")
+        else:
+            for file_path in dream_files:
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+                    for i, line in enumerate(lines):
+                        if line.startswith("[ ("):
+                            match = re.search(r'\[ \((.*?)\) \| \((.*?)\) \]', line)
+                            if match:
+                                title = match.group(1)
+                                date_str = match.group(2)
+                                formatted_output = f"[ ({title}) | ({date_str}) ]\n"
+
+                                # Join all lines except the last one in rest_of_content
+                                rest_of_content = ''.join(lines[i + 1:])
+
+                                full_output = formatted_output + rest_of_content
+
+                                with open(output_file_path, 'a') as output_file:
+                                    output_file.write(full_output)
+                                    output_file.write("\n==============================\n")
+        self.send_email(output_file_path)
+        logs.log("STATUS", f"[bold green]Backing Up Success [/bold green]: {backup_file_name}")
 
     # Function to get instant input
     def getch(self):
@@ -814,8 +839,7 @@ class DreamHandler:
                     dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
                 else:
                     console.print("[bold yellow]Sync canceled.[/bold yellow]")
-                dream_files = self.list_files(self.journal_dir)[::-1]
-            
+                dream_files = self.list_files(self.journal_dir)[::-1]         
             elif user_command == "f" and dream_files:
                 # Prompt the user for a search keyword
                 search_keyword = Prompt.ask("[bold cyan]Search keyword:[/bold cyan]", show_default=False).strip()
@@ -837,7 +861,7 @@ class DreamHandler:
                     console.print(f"[bold red]No Matches For: {search_keyword}[/bold red]")
                     time.sleep(1)
                 else:
-                    search_index = 0
+                    search_index = len(matching_files) - 1
 
                     # New search-based navigation
                     while True:
@@ -870,8 +894,17 @@ class DreamHandler:
                             title_table.add_column("Dream Title", justify="left", style="italic", width=20)
                             title_table.add_column("Dream Date", justify="left", style="italic", width=10)
 
+                            # Create a Text object for the title
+                            highlighted_title = Text(dream.title)
+
+                            # Highlight all occurrences of the search_keyword (case-insensitive)
+                            highlighted_title.highlight_regex(
+                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
+                                style="bold yellow"
+                            )
+
                             # Add a row with the dream title and date
-                            title_table.add_row(dream.title, dream.date)
+                            title_table.add_row(highlighted_title, dream.date)
 
                             # Create a table for the stats
                             stats_table = Table(border_style="white", box=box.SQUARE, width=75)
@@ -922,7 +955,7 @@ class DreamHandler:
                         command_table.add_column("Command", justify="center", style="bold green")
 
                         # Add the commands in a horizontal format
-                        command_table.add_row("(n)ext | (p)revious | (q)uit")
+                        command_table.add_row("(n)ext | (p)revious | (b)ack")
                         console.print(command_table)
 
                         # Ask user for input
@@ -930,13 +963,13 @@ class DreamHandler:
 
                         # Handle navigation commands
                         if user_command == 'n':
-                            search_index = (search_index + 1) % len(matching_files)  # Move to the next result
+                            search_index = (search_index - 1) % len(matching_files)  # Move to the next result
                         elif user_command == 'p':
-                            search_index = (search_index - 1) % len(matching_files)  # Move to the previous result
-                        elif user_command == 'q':
+                            search_index = (search_index + 1) % len(matching_files)  # Move to the previous result
+                        elif user_command == 'b':
                             break  # Exit the search navigation loop
-
-            
+            elif user_command == "b" and dream_files:
+               self.backup() 
             elif user_command == "q":
                 TerminalClear.clear()
                 break
