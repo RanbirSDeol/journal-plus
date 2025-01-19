@@ -1,0 +1,27 @@
+{
+    "pin": "",
+    "directories": {
+        "root": "../data",
+        "dreams": "../data/dreams",
+        "journal": "../data/journal",
+        "backups": "../data/backups"
+    },
+    "paths": {
+        "logs": "../data/logs.txt",
+        "dream-sync": "../data/sync-dream.txt",
+        "template": "../template.txt"
+    },
+    "editor": "emacs -nw",
+    "display": {
+        "enable_colors": true,
+        "show_errors": false
+    },
+    "features": {
+        "enable_deletion": false,
+        "unfinished_tag": false
+    },
+    "smtp": {
+        "server": "smtp.gmail.com",
+        "port": 587
+    }
+}

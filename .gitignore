@@ -1,0 +1,9 @@
+backups/
+journal/
+sync.txt
+sync.txt~
+logs.txt~
+template.txt~
+logs.txt
+legacy/
+data/

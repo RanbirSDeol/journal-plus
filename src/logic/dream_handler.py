@@ -1,0 +1,1008 @@
+# Dream class
+# This class will handle the dream journal
+# @RanbirSDeol
+# 1/17/2025
+
+# Modules
+import sys
+import os
+import re
+import termios
+import subprocess
+import tty
+import time
+import random
+from datetime import datetime
+
+# Classes
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.imports import *
+
+# Dream class
+from .models.dream import Dream
+
+# A list of all the months, to be used to convert number month to word month
+MONTHS = [
+    None, 'January', 'February', 'March', 'April', 'May', 
+    'June', 'July', 'August', 'September', 'October', 'November', 'December'
+]
+
+# A list of all the months mapped to a number, used to convert word months to numbers
+MONTHS_REVERSED = {
+    "January": '01',
+    "February": '02',
+    "March": '03',
+    "April": '04',
+    "May": '05',
+    "June": '06',
+    "July": '07',
+    "August": '08',
+    "September": '09',
+    "October": '10',
+    "November": '11',
+    "December": '12'
+}
+
+# Vars
+console = Console()
+
+# Global constants
+PROGRAM_TITLE = "Dream Journal"
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Construct the path to sync-dream.txt in the grandparent directory
+sync_file_path = os.path.join(script_dir, '..', '..', 'data', 'sync-dream.txt')
+
+# Use the dynamically constructed path for the SYNC_FILE
+SYNC_FILE = sync_file_path
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+settings_path = os.path.join(script_dir, '..', 'settings.json')
+# Pass the dynamically constructed path to the Logger
+logs = Logger(settings_file=settings_path)
+
+class DreamHandler:
+    def __init__(self, journal_dir):
+        self.journal_dir = journal_dir
+    
+    # Print our title
+    def print_title(self):
+        title = Panel(f"[purple]{PROGRAM_TITLE}[/purple]", style="bold white", width=17)
+        console.print(title)
+
+    # Print our command prompt
+    def print_prompt(self, command):
+        console = Console()
+        if not command:
+            prompt_text = "[white]Command: [/white]"
+            prompt = Panel(prompt_text, width=14)
+            console.print(prompt)
+        else:
+            prompt_text = f"[white]Command: {command} [/white]"
+            prompt = Panel(prompt_text, width=14)
+            console.print(prompt)
+        
+    # Print our command entered
+    def print_command(self, user_command):
+        console = Console()
+        panel = Panel(f"[bold green]Command[/bold green]: {user_command}", expand=False)
+        console.print(panel)
+
+    # Print unknown command
+    def print_unknown(self, input_command):
+        console = Console()
+        unknown_command = Panel(f"[bold red]Unknown Command[/bold red]: {input_command}", expand=False)
+        console.print(unknown_command)
+
+    # Function to create a dream
+    def create_dream(self):
+        """Create a new dream entry and save it in the desired folder structure."""
+        
+        console = Console()
+        
+        # Prompt the user for the date in MM/DD/YYYY format using Rich
+        while True:
+            date_input = Prompt.ask("Enter the date of the dream (MM/DD/YYYY) or ('q' to quit creation):")
+            if date_input.lower() == 'q':
+                console.print("[bold red]Dream creation aborted.[/bold red]")
+                return
+            
+            # Validate the date format
+            try:
+                date_obj = datetime.strptime(date_input, "%m/%d/%Y")
+                month_name = date_obj.strftime("%B")  # Get full month name
+                day = date_obj.day
+                year = date_obj.year
+                break  # Exit the loop if the date is valid
+            except ValueError:
+                console.print("[bold red]Invalid date format. Please enter the date in YYYY/MM/DD format (e.g., 2025/01/18).[/bold red]")
+
+        # Title panel
+        title_panel = Panel(
+            Text("Enter a title for your dream entry:", justify="center"),
+            title="Dream Title",
+            border_style="white",
+            width=75,
+        )
+        console.print(title_panel)
+        title = Prompt.ask("", default="Untitled Dream", show_default=False)
+        
+        # Dream type panel
+        dream_type_panel = Panel(
+            Text("Vague | Normal | Vivid | Vivimax | Lucid | Nightmare | No Recall:", justify="center"),
+            title="Dream Type",
+            border_style="white",
+            width=75,
+        )
+        console.print(dream_type_panel)
+        dream_type = Prompt.ask("", default="Lucid", show_default=False)
+        
+        # Dream technique panel
+        technique_panel = Panel(
+            Text("None | WILD | DILD | MILD | SSILD:", justify="center"),
+            title="Dream Technique",
+            border_style="white",
+            width=75,
+        )
+        console.print(technique_panel)
+        technique = Prompt.ask("", default="WILD", show_default=False)
+
+        # Sleep cycle panel
+        sleep_cycle_panel = Panel(
+            Text("Enter a sleep cycle (Regular | Nap | WBTB):", justify="center"),
+            title="Sleep Cycle",
+            border_style="white",
+
+            width=75,
+        )
+        console.print(sleep_cycle_panel)
+        sleep_cycle = Prompt.ask("", default="REM", show_default=False)
+        
+        # Content panel
+        content_panel = Panel(
+            Text("Would you like to open and edit the dream entry (y / n)?", justify="center"),
+            title="Edit Entry",
+            border_style="white",
+            width=75,
+        )
+        console.print(content_panel)
+        edit_choice = Prompt.ask("", default="n", show_default=False)
+
+        # Define the folder structure: year/month_name/day
+        folder_path = os.path.join(self.journal_dir, str(year), month_name, str(day))
+
+        # Create the directories if they don't exist
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+        
+        # Generate timestamp for the file
+        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Create a file name based on the title and timestamp
+        file_name = f"{title.replace(' ', '_')}_{time_stamp}.txt"
+        
+        # Create a new Dream object
+        dream = Dream(
+            title=title,
+            dream_type=dream_type,  # Dynamic now
+            technique=technique,    # Dynamic now
+            sleep_cycle=sleep_cycle,  # Dynamic now
+            entry="Empty Entry.",  # Static for now, can be updated
+            date=f"{day} {month_name}, {year}",  # Format date as "Month Day, Year"
+            date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
+        
+        TEXT_EDITOR = ["emacs", "-nw", os.path.join(folder_path, file_name)]
+
+        # Write the formatted dream entry to the file
+        with open(os.path.join(folder_path, file_name), 'w') as dream_file:
+            dream_file.write(dream.format_dream_entry())
+
+        if edit_choice.lower() == 'y':
+            console.print(f"[bold green]Opening {file_name} for editing...[/bold green]")
+            # Define the command to open the file in Emacs in the terminal
+            
+            try:
+                subprocess.run(TEXT_EDITOR, check=True)
+            except subprocess.CalledProcessError as e:
+                console.print(f"[bold red]Failed to open {file_name} in Emacs.[/bold red]")
+            except FileNotFoundError as e:
+                console.print("[bold red]Emacs is not installed or not found.[/bold red]")
+        
+        # Display success message using Rich
+        console.print(Panel(f"Dream saved successfully at [bold green]{folder_path}[/bold green]", style="bold green"))
+        console.print(f"File name: [bold yellow]{file_name}[/bold yellow]")
+    
+    # Function to open dream using our editor
+    def edit_dream(self, path):
+        """
+        Edit the dream journal file using Emacs in the terminal.
+        """
+        
+        console = Console()
+        
+        if os.path.exists(path):
+            console.print(f"[bold green]Opening {path} for editing in Emacs...[/bold green]")
+            
+            # Define the command to open the file in Emacs in the terminal
+            TEXT_EDITOR = ["emacs", "-nw", path]
+            
+            try:
+                # Use subprocess to open the file in Emacs
+                subprocess.run(TEXT_EDITOR, check=True)
+            except subprocess.CalledProcessError as e:
+                console.print(f"[bold red]Failed to open {path} in Emacs.[/bold red]")
+            except FileNotFoundError as e:
+                console.print("[bold red]Emacs is not installed or not found.[/bold red]")
+        else:
+            console.print(f"[bold red]The file {path} does not exist.[/bold red]")
+ 
+    # Function to sync our dreams
+    def sync(self):
+        """
+        Sync loads a .txt file and reads all the contents. It then
+        turns the text inside the body into a dream journal.
+        """
+
+        # A count to store how many files we've created
+        files_created_count = 0
+
+        try:
+            # Open our sync.txt and read its contents
+            with open(SYNC_FILE, 'r') as file:
+                content = file.readlines()
+
+            # Variable to store all entries in an organized manner
+            organized_entries = []
+
+            # Temporary variable to store the local entry
+            entry = None
+            capture_body = False
+
+            for line in content:
+                # Remove leading and trailing spaces
+                line = line.strip()
+
+                # Check if the line starts with our delimiter
+                if line == "==============================":
+                    # Check if an entry exists and append it to organized_entries
+                    if entry and entry["Body"]:
+                        organized_entries.append(entry)
+                    # Initialize a new entry
+                    entry = {"Date": "", "Title": "", "Body": "", "Dream Type": "", "Technique": "", "Sleep Cycle": ""}
+                    capture_body = False
+
+                # If we have an entry
+                elif entry is not None:
+                    if line.startswith("[ (") and "|" in line:
+                        # Extract title and date
+                        parts = line.split("|")
+                        entry["Title"] = parts[0].strip("[ (")[:-1].strip()
+                        entry["Date"] = parts[1].strip(") ]")[1:].strip()
+                    elif line.startswith("Dream Type:"):
+                        entry["Dream Type"] = line.split(":")[1].strip()
+                    elif line.startswith("Technique:"):
+                        entry["Technique"] = line.split(":")[1].strip()
+                    elif line.startswith("Sleep Cycle:"):
+                        entry["Sleep Cycle"] = line.split(":")[1].strip()
+                    elif line.startswith("───────────────────────────────────────────────────────────────────────"):
+                        # Don't capture the separator line itself, but keep the capture process going
+                        continue
+                    elif capture_body:
+                        if entry["Body"]:
+                            entry["Body"] += "\n"
+                        entry["Body"] += line
+
+                    # Start capturing body after separator
+                    elif line.strip() and capture_body is False:
+                        capture_body = True
+                        entry["Body"] = line  # Start adding the body with the first non-separator line
+
+            # If we have a valid entry at the end of the file, append it to organized_entries
+            if entry and entry["Body"]:
+                organized_entries.append(entry)
+
+            # Set up the loading bar using Rich
+            with Progress() as progress:
+                task = progress.add_task("[cyan]Syncing dreams...", total=len(organized_entries))
+
+                # Loop through the entries, and create a journal .txt for each
+                for entry in organized_entries:
+                    time.sleep(0.005) 
+                    try:
+                        entry["Body"] = entry["Body"].replace(
+                            "[ Dream Entry ]",
+                            "[ Dream Entry ]\n───────────────────────────────────────────────────────────────────────"
+                        )
+                        
+                        # We'll split our date, to check if it is valid
+                        day, month, year = self.date_formatter(entry['Date'], False, False).split('-')
+                        
+                        date_str = f"{day}-{month}-{year}"  # "17-01-2024"
+                        
+                        date_obj = datetime.strptime(date_str, "%d-%m-%Y")
+                        
+                        month_name = date_obj.strftime("%B")
+                        
+                        # Generate timestamp for the file
+                        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        
+                        # Create a file name based on the title and timestamp
+                        file_name = f"{(entry['Title']).replace(' ', '_')}_{time_stamp}.txt"
+                        
+                        # Create a new Dream object
+                        dream = Dream(
+                            title=(entry["Title"]),
+                            dream_type=(entry["Dream Type"]),
+                            technique=(entry["Technique"]), 
+                            sleep_cycle=(entry["Sleep Cycle"]),
+                            entry=(entry["Body"]),  # Static for now, can be updated
+                            date=f"{day} {month_name}, {year}",  # Format date as "Month Day, Year"
+                            date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        )
+
+                        # Define the folder structure: year/month_name/day
+                        folder_path = os.path.join(self.journal_dir, str(year), month_name, str(day))
+                        
+                        # Create the directories if they don't exist
+                        if not os.path.exists(folder_path):
+                            os.makedirs(folder_path)
+
+                        # For every file in the folder, remove their timestamp part and check
+                        existing_files = os.listdir(folder_path)
+
+                        # Loop through each file in the folder and remove the timestamp part
+                        existing_file_base_names = [ "_".join(file.split("_")[:-1]) for file in existing_files if file.endswith('.txt')]
+
+                        # Check if the file name without the timestamp already exists
+                        file_name_without_timestamp = "_".join(file_name.split("_")[:-1])  # Remove the timestamp part
+
+                        if file_name_without_timestamp in existing_file_base_names:
+                            logs.log("INFO", f"File with the base name '{file_name_without_timestamp}' already exists. Skipping creation.")
+                            continue  # Skip this entry if a file with the same base name exists
+                        
+                        # Write the formatted dream entry to the file
+                        with open(os.path.join(folder_path, file_name), 'w') as dream_file:
+                            dream_file.write(dream.format_dream_entry())
+                        
+                        files_created_count += 1
+
+                    except Exception as e:
+                        logs.log("ERROR", f"Failed to sync dreams: {e}")
+                    
+                    # Update the progress bar
+                    progress.update(task, advance=1)
+
+        except Exception as e:
+            logs.log("ERROR", f"Failed to sync dreams: {e}")
+
+        # Log the total files created
+        logs.log("SUCCESS", f"Sync.txt Was Loaded! Files Created: {files_created_count}")
+    
+    # Deletion of a dream  [X]
+    def delete_dream(self, file_path):
+        """Delete a dream entry by file path."""
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
+        else:
+            print(f"File not found: {file_path}")
+        """
+        Formatting a date into the numerical version:
+        eg. [Day Month, Year] -> [YYYY/MM/DD] (1) | Or [Month Day, Year] -> [YYYY/MM/DD] (2)
+        (1) is used for creation, (2) is used for the syncing [backup file is in month day]
+        """
+
+        try: 
+
+            # Splitting date using ','
+            parts = date_unformatted.split(',')
+
+            # Variables to store our formatted day, month, and year
+            day = ''
+            month = ''
+            year = ''
+
+            # Checking if we have a split of 2 parts [Day Month, Year]
+            if len(parts) == 2:
+                # We have [Month Day, Year]
+                
+                if flipped:
+                    # Getting the day and month, also removing the starting '('
+                    day_month = parts[0].strip().removeprefix('(')
+                    # Getting the year
+                    year = parts[1].strip()
+
+                    print(year)
+                    
+                    # Extracting day and month
+                    day_month_parts = day_month.split()
+
+                    # Checking if we have two parts
+                    if len(day_month_parts) == 2:
+                        # Our month
+                        month = day_month_parts[0].strip()
+                        # Our day
+                        day = day_month_parts[1].strip() 
+                        # Checking if we have a valid month
+                        if month in MONTHS_REVERSED:
+                            if day.isdigit() and 1 <= int(day) <= 31:
+                                formatted_date = f"{year}-{MONTHS_REVERSED[month]}-{day}"
+                                return formatted_date
+                            
+                # We have [Day Month, Year]
+                else:
+                    # Getting the day and month, and removing the starting '('
+                    day_month = parts[0].strip().removeprefix('(')
+                    # The year, minus a ')' bracket at the end
+                    if bracketBug:
+                        year = parts[1].strip()[:-1]
+                    else:
+                        year = parts[1].strip()
+                    
+                    # Extracting day and month
+                    day_month_parts = day_month.split()
+
+                    # Checking if we have a valid split
+                    if len(day_month_parts) == 2:
+                        # Day part
+                        day = day_month_parts[0].strip()  
+                        # Month part  
+                        month = day_month_parts[1].strip()
+                        
+                        # Checking if this month exists
+                        if month in MONTHS_REVERSED:
+                            if day.isdigit() and 1 <= int(day) <= 31:
+                                formatted_date = day + "-" + str(MONTHS_REVERSED[month]) + "-" + year
+                                return formatted_date
+
+        # Return error and 'DirtyEntry', also log the error
+        except Exception as e:
+            return 'DirtyEntry'
+        
+        return 'DirtyEntry'
+     
+    # Get the date from a file [X]
+    def extract_date_from_file(self, file_path):
+        """
+        A function that extracts the dream date from a file
+
+        Arguments:
+            file_path (str): The files path, so that we can read it
+            
+        Returns:
+            The date, if we have it inside the file, othewise return 'DirtyEntry',
+            so that we don't accidentally crash the program
+        """
+        try:
+            # Pattern to match date after inital '|'
+            # Eg. [ (Title) | (X) ]
+            date_pattern = r"\[.*\| (.*) \]" 
+
+            # We'll then open that file in read mode
+            with open(file_path, 'r') as file:
+                
+                # Read the content
+                content = file.read()
+
+                # Check if we have the date pattern inside the content
+                match = re.search(date_pattern, content)
+                if match:
+                    # Let's return the date
+                    return match.group(1)
+                else:
+                    # Throw an error if the date is missing, and log it
+                    print("───────────────────────────────────────────────────────────────────────")
+                    return 'DirtyEntry'
+                
+        # We've caught an error
+        except Exception as e:
+            print("───────────────────────────────────────────────────────────────────────")
+            return 'DirtyEntry' 
+    
+    # Formats the date [X]
+    def date_formatter(self, date_unformatted, flipped, bracketBug):
+        """
+        Formatting a date into the numerical version:
+        eg. [Day Month, Year] -> [YYYY/MM/DD] (1) | Or [Month Day, Year] -> [YYYY/MM/DD] (2)
+        (1) is used for creation, (2) is used for the syncing [backup file is in month day]
+
+        Arguments:
+            date_unformatted (str): The unformatted date
+            flipped (bool): If we either want (1) True or (2) False
+            
+        Returns:
+            The date formatted in the method requested, or 'DirtyEntry', meaning that the string was malformed
+        """
+
+        try: 
+
+            # Splitting date using ','
+            parts = date_unformatted.split(',')
+
+            # Variables to store our formatted day, month, and year
+            day = ''
+            month = ''
+            year = ''
+
+            # Checking if we have a split of 2 parts [Day Month, Year]
+            if len(parts) == 2:
+                # We have [Month Day, Year]
+                
+                if flipped:
+                    # Getting the day and month, also removing the starting '('
+                    day_month = parts[0].strip().removeprefix('(')
+                    # Getting the year
+                    year = parts[1].strip()
+
+                    print(year)
+                    
+                    # Extracting day and month
+                    day_month_parts = day_month.split()
+
+                    # Checking if we have two parts
+                    if len(day_month_parts) == 2:
+                        # Our month
+                        month = day_month_parts[0].strip()
+                        # Our day
+                        day = day_month_parts[1].strip() 
+                        # Checking if we have a valid month
+                        if month in MONTHS_REVERSED:
+                            if day.isdigit() and 1 <= int(day) <= 31:
+                                formatted_date = f"{year}-{MONTHS_REVERSED[month]}-{day}"
+                                return formatted_date
+                            
+                # We have [Day Month, Year]
+                else:
+                    # Getting the day and month, and removing the starting '('
+                    day_month = parts[0].strip().removeprefix('(')
+                    # The year, minus a ')' bracket at the end
+                    if bracketBug:
+                        year = parts[1].strip()[:-1]
+                    else:
+                        year = parts[1].strip()
+                    
+                    # Extracting day and month
+                    day_month_parts = day_month.split()
+
+                    # Checking if we have a valid split
+                    if len(day_month_parts) == 2:
+                        # Day part
+                        day = day_month_parts[0].strip()  
+                        # Month part  
+                        month = day_month_parts[1].strip()
+                        
+                        # Checking if this month exists
+                        if month in MONTHS_REVERSED:
+                            if day.isdigit() and 1 <= int(day) <= 31:
+                                formatted_date = day + "-" + str(MONTHS_REVERSED[month]) + "-" + year
+                                return formatted_date
+
+        # Return error and 'DirtyEntry', also log the error
+        except Exception as e:
+            return 'DirtyEntry'
+        
+        # We got to the end without raising an error or returing
+        # Throw an error and return 'DirtyEntry'
+        return 'DirtyEntry'
+    
+    def list_files(self, directory):
+        """
+        A function to list all text files in a directory structure.
+        Ensures files are sorted in the correct order:
+        - By year (newest to oldest)
+        - By month (newest to oldest)
+        - By day (newest to oldest)
+        - By creation time (latest to earliest within the same day).
+        """
+
+        # List to store files with metadata
+        files = []
+
+        # Loop through all files in the directory structure
+        for root, _, file_names in os.walk(directory):
+            for file_name in file_names:
+                if file_name.endswith(".txt"):
+                    # Full file path
+                    file_path = os.path.join(root, file_name)
+
+                    # Extract date components from the directory structure (YEAR/MONTH_NAME/DAY)
+                    parts = os.path.normpath(root).split(os.sep)
+                    try:
+                        # Assuming directory structure: YEAR/MONTH_NAME/DAY
+                        year = int(parts[-3])
+                        month = datetime.strptime(parts[-2], "%B").month  # Convert month name to number
+                        day = int(parts[-1])
+                        file_date = datetime(year, month, day)
+                    except (IndexError, ValueError):
+                        # Default to the earliest possible date if parsing fails
+                        file_date = datetime.min
+
+                    # Get the file's creation time
+                    creation_time = os.path.getctime(file_path)
+
+                    # Append the file with its metadata
+                    files.append((file_date, creation_time, file_path))
+
+        # Sort files:
+        # - By file date (newest to oldest)
+        # - By creation time (latest to earliest within the same date)
+        files.sort(
+            key=lambda entry: (entry[0], -entry[1]),  # Negate creation time for descending order
+            reverse=True
+        )
+
+        # Return only the file paths in the sorted order
+        return [file_path for _, _, file_path in files]
+
+    # Function to get instant input
+    def getch(self):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+    # Function to navigate dreams
+    def navigate(self):
+        """
+        Navigate through dreams using a rich UI.
+        Commands:
+            [n]ext, [p]revious, [e]dit, [d]elete, [s]earch, [c]lear logs, [q]uit
+        """
+        console = Console()
+        dream_files = self.list_files(self.journal_dir)[::-1]
+        
+        if not dream_files:
+            # Display a message if no dream entries are found
+            console.print(Panel("No Dream Entries Found!", style="bold yellow"))
+            index = 0  # No files, set index to 0
+        else:
+            index = len(dream_files) - 1
+
+        command = ""
+
+        while True:
+            TerminalClear.clear()
+
+            # Wrap index around if it goes out of bounds
+            index = index % len(dream_files) if dream_files else 0  # Avoid index error when no files
+
+            if dream_files:
+                # Display the current dream entry in a panel
+                dream_file = dream_files[index]
+
+                try:
+                    with open(dream_file, 'r') as file:
+                        dream = Dream.from_file(file.read())
+                        
+                    # Index starts from 1, not 0
+                    current_index = index + 1
+                    total_entries = len(dream_files)
+
+                    index_panel = Panel(
+                        Text(f"[{current_index} / {total_entries}]", justify="center"),
+                        title="Index",
+                        border_style="white",
+                        box=box.ROUNDED,
+                        width=17,
+                    )
+
+                    # Create a table for the title and date
+                    title_table = Table(border_style="white", box=box.ROUNDED, width=75)
+
+                    # Add columns to the table
+                    title_table.add_column("Dream Title", justify="left", style="italic", width=20)
+                    title_table.add_column("Dream Date", justify="left", style="italic", width=10)
+
+                    # Add a row with the dream title and date
+                    title_table.add_row(dream.title, dream.date)
+
+                    # Create a table for the stats
+                    stats_table = Table(border_style="white", box=box.SQUARE, width=75)
+
+                    # Add columns to the table
+                    stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
+                    stats_table.add_column("Value", justify="left", style="white", width=25)
+
+                    # Add rows for each stat
+                    stats_table.add_row("Dream Type", dream.dream_type)
+                    stats_table.add_row("Technique", dream.technique)
+                    stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+
+                    # Panel for the dream content
+                    content_panel = Panel(
+                        dream.entry,
+                        title="Dream Content",
+                        border_style="white",
+                        box=box.ROUNDED,
+                        width=75
+                    )
+
+                    # Print all content before commands
+                    TerminalClear.clear()
+                    self.print_title()
+                    console.print(index_panel)
+                    console.print(title_table)
+                    console.print(stats_table)
+                    console.print(content_panel)
+
+                except Exception as e:
+                    error_message = f"Error reading file: {os.path.basename(dream_file)} - {str(e)}"
+                    console.print(Panel(error_message, style="bold red"))
+
+            # Create a horizontal table for the commands
+            command_table = Table(
+                show_header=False, box=box.SQUARE, border_style="white", width=75
+            )
+            command_table.add_column("Command", justify="center", style="bold green")
+
+            # Add the commands in a horizontal format
+            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (b)ackup | (s)ync | (q)uit")
+
+            # Display the commands table
+            console.print(command_table)
+            self.print_prompt(command)
+
+            # Ask user for input
+            user_command = self.getch().lower()
+            command = user_command
+
+            # Handle commands
+            if user_command == "n" and dream_files:
+                index -= 1
+                self.print_prompt(user_command)
+            elif user_command == "p" and dream_files:
+                index += 1
+                self.print_prompt(user_command)
+            elif user_command == "c":
+                TerminalClear.clear()
+                self.print_title()
+                self.create_dream()
+                dream_files = self.list_files(self.journal_dir)[::-1]
+                index = len(dream_files) - 1
+            elif user_command == "e" and dream_files:
+                self.print_prompt(user_command)
+                self.edit_dream(dream_files[index])
+                dream_files = self.list_files(self.journal_dir)[::-1]
+            elif user_command == "i" and dream_files:
+                # Getting our index location we want to navigate to
+                prompt_text = "[white]Enter Index[/white]"
+                prompt = Panel(prompt_text, width=14)
+                console.print(prompt)
+                index_location = Prompt.ask("", show_default=False)
+                try:
+                    index_location = int(index_location)
+                    if 0 <= index_location <= len(dream_files):
+                        index = index_location - 1
+                except Exception as e:
+                    pass
+            elif user_command == "d" and dream_files:
+                random_number = random.randint(1000, 9999)
+        
+                # Display the prompt with the random number
+                prompt_text = f"[bold red]Enter Number To Delete Entry {index + 1}: {random_number}[/bold red]"
+                prompt = Panel(prompt_text, width=75)
+                console.print(prompt)
+
+                # Ask the user for input
+                user_input = Prompt.ask("", show_default=False)
+                
+                # Check if the entered number matches the generated number
+                if user_input == str(random_number):
+                    prompt = Panel(prompt_text, width=40)
+                    console.print(prompt)
+                    self.print_prompt(user_command)
+                    self.delete_dream(dream_files[index])
+                    dream_files = self.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
+                else:
+                    console.print("[bold yellow]Incorrect number. Deletion canceled.[/bold yellow]")
+            elif user_command == "s":
+                # Ask for confirmation before syncing
+                prompt_text = f"[bold cyan]Do you want to sync your entries? (y/n):[/bold cyan]"
+                prompt = Panel(prompt_text, width=75)
+                console.print(prompt)
+                sync_confirm = Prompt.ask("", show_default=False)
+                
+                if sync_confirm == "y":
+                    self.print_prompt(user_command)
+                    self.sync()  # Proceed with syncing
+                    dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
+                else:
+                    console.print("[bold yellow]Sync canceled.[/bold yellow]")
+                dream_files = self.list_files(self.journal_dir)[::-1]
+            
+            elif user_command == "f" and dream_files:
+                # Prompt the user for a search keyword
+                search_keyword = Prompt.ask("[bold cyan]Search keyword:[/bold cyan]", show_default=False).strip()
+                
+                # Gather a list of files that match the search phrase along with their original index
+                matching_files = []
+                for index, file in enumerate(self.list_files(self.journal_dir)):
+                    with open(file, 'r') as f:
+                        content = f.read()
+                        # Use a regex to match whole words only (case-insensitive)
+                        if re.search(rf'\b{re.escape(search_keyword)}\b', content, flags=re.IGNORECASE):
+                            matching_files.append((file, index))
+
+                # Reverse the list of matching files
+                matching_files = matching_files[::-1]
+                
+                # If no matches found, log an error
+                if not matching_files:
+                    console.print(f"[bold red]No Matches For: {search_keyword}[/bold red]")
+                    time.sleep(1)
+                else:
+                    search_index = 0
+
+                    # New search-based navigation
+                    while True:
+                        # Clear the terminal
+                        TerminalClear.clear()
+
+                        # Get the current dream file based on the search index
+                        search_dream_file, _ = matching_files[search_index]
+
+                        try:
+                            with open(search_dream_file, 'r') as file:
+                                dream = Dream.from_file(file.read())
+
+                            # Index starts from 1, not 0
+                            current_index = search_index + 1
+                            total_entries = len(matching_files)
+
+                            index_panel = Panel(
+                                Text(f"[{current_index} / {total_entries}]", justify="center"),
+                                title="Index",
+                                border_style="white",
+                                box=box.ROUNDED,
+                                width=17,
+                            )
+
+                            # Create a table for the title and date
+                            title_table = Table(border_style="white", box=box.ROUNDED, width=75)
+
+                            # Add columns to the table
+                            title_table.add_column("Dream Title", justify="left", style="italic", width=20)
+                            title_table.add_column("Dream Date", justify="left", style="italic", width=10)
+
+                            # Add a row with the dream title and date
+                            title_table.add_row(dream.title, dream.date)
+
+                            # Create a table for the stats
+                            stats_table = Table(border_style="white", box=box.SQUARE, width=75)
+
+                            # Add columns to the table
+                            stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
+                            stats_table.add_column("Value", justify="left", style="white", width=25)
+
+                            # Add rows for each stat
+                            stats_table.add_row("Dream Type", dream.dream_type)
+                            stats_table.add_row("Technique", dream.technique)
+                            stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+
+                            # Create a Text object for the content
+                            highlighted_entry = Text(dream.entry)
+
+                            # Highlight all occurrences of the search_keyword (case-insensitive)
+                            highlighted_entry.highlight_regex(
+                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
+                                style="bold yellow"
+                            )
+
+                            # Panel for the dream content
+                            content_panel = Panel(
+                                highlighted_entry,
+                                title="Dream Content",
+                                border_style="white",
+                                box=box.ROUNDED,
+                                width=75
+                            )
+
+                            # Print all content before commands
+                            TerminalClear.clear()
+                            self.print_title()
+                            console.print(index_panel)
+                            console.print(title_table)
+                            console.print(stats_table)
+                            console.print(content_panel)
+
+                        except Exception as e:
+                            error_message = f"Error reading file: {os.path.basename(search_dream_file)} - {str(e)}"
+                            console.print(Panel(error_message, style="bold red"))
+
+                        # Create a horizontal table for the commands
+                        command_table = Table(
+                            show_header=False, box=box.SQUARE, border_style="white", width=75
+                        )
+                        command_table.add_column("Command", justify="center", style="bold green")
+
+                        # Add the commands in a horizontal format
+                        command_table.add_row("(n)ext | (p)revious | (q)uit")
+                        console.print(command_table)
+
+                        # Ask user for input
+                        user_command = self.getch().lower()
+
+                        # Handle navigation commands
+                        if user_command == 'n':
+                            search_index = (search_index + 1) % len(matching_files)  # Move to the next result
+                        elif user_command == 'p':
+                            search_index = (search_index - 1) % len(matching_files)  # Move to the previous result
+                        elif user_command == 'q':
+                            break  # Exit the search navigation loop
+
+            
+            elif user_command == "q":
+                TerminalClear.clear()
+                break
+
+    # Function to clear the terminal
+    def clear_terminal(self):
+        console = Console()
+        TerminalClear.clear()
+        self.print_title()
+        panel = Panel(f"[bold green]Command[/bold green]: clear", expand=False)
+        console.print(panel)
+
+    # Function to display all commands [X]
+    def display_help(self):
+        '''
+        A function that displays all commands
+        '''
+
+        # Create, Navigate, Backup, Stats
+
+        console = Console()
+        table = Table()
+
+        # Add columns
+        table.add_column("Commands", justify="left", style="bold green")
+        table.add_column("Description", justify="left")
+
+        # Program commands
+        table.add_row("[purple]'dream'[/purple]", "Opens your dream journal")
+        table.add_row("[yellow]'journal'[/yellow]", "Opens your journal")
+        
+        table.add_row("", "")
+        
+        table.add_row("[red]'clr_logs'[/red]", "Clears your logs")
+        
+        table.add_row("", "")
+
+        # Console commands
+        table.add_row("[green]'logs'[/green]", "Displays your logs")
+        table.add_row("[green]'help'[/green]", "Displays the help menu")
+        table.add_row("[green]'clear'[/green]", "Clear the terminal")
+        table.add_row("[green]'exit'[/green]", "Exit the program")
+
+        # Print the table
+        console.print(table)
+
+    # Function to handle commands from user  [X]
+    def handle_commands(self, input_command):
+        '''
+        A function that connects all commands to their functions
+        '''
+
+        commands = {
+            "help": self.display_help,
+            "clear": self.clear_terminal,
+            "quit": exit
+        }
+
+        command_func = commands.get(input_command)
+        if command_func:
+            command_func()
+        else:
+            self.print_unknown(input_command)
+
+    # Dream handler's main loop
+    def run(self):
+        """Main loop for the Dream journal."""
+
+        self.navigate()
