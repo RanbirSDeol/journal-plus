@@ -36,6 +36,7 @@ with open(settings_file_path, 'r') as file:
 # Load our settings.json
 SMTP_SERVER = config['smtp']['server']
 SMTP_PORT = config['smtp']['port']
+JOURNAL_DIR = config['directories']['dreams']
 
 # A list of all the months, to be used to convert number month to word month
 MONTHS = [
@@ -79,16 +80,24 @@ settings_path = os.path.join(script_dir, '..', 'settings.json')
 # Pass the dynamically constructed path to the Logger
 logs = Logger(settings_file=settings_path)
 
+
+# Local Function
+        
+def clear():
+    console.clear()
+
 class DreamHandler:
-    def __init__(self, journal_dir):
-        self.journal_dir = journal_dir
+    def __init__(self):
+        self.journal_dir = JOURNAL_DIR
     
-    # Print our title
+    # | Local Functions |
+    def print_panel(self, content, color, style, width):
+        logs.log("DEBUG", f"{color}, {content}, {style}, {width}")
+        panel = Panel(f"[{color}]{content}[/{color}]", style=f"bold {style}", width=width)
+        console.print(panel)
     def print_title(self):
         title = Panel(f"[purple]{PROGRAM_TITLE}[/purple]", style="bold white", width=17)
         console.print(title)
-
-    # Print our command prompt
     def print_prompt(self, command):
         if not command:
             prompt_text = "[white]Command: [/white]"
@@ -98,18 +107,329 @@ class DreamHandler:
             prompt_text = f"[white]Command: {command} [/white]"
             prompt = Panel(prompt_text, width=14)
             console.print(prompt)
-        
-    # Print our command entered
     def print_command(self, user_command):
-        
         panel = Panel(f"[bold green]Command[/bold green]: {user_command}", expand=False)
         console.print(panel)
-
-    # Print unknown command
     def print_unknown(self, input_command):
-        
         unknown_command = Panel(f"[bold red]Unknown Command[/bold red]: {input_command}", expand=False)
         console.print(unknown_command)
+     
+    # | Program | 
+    def navigate(self):
+        """Function to navigate through our dream journal"""
+        
+        # Our files
+        dream_files = self.list_files(self.journal_dir)[::-1]
+        
+        # Make sure we have dream files
+        if not dream_files:
+            self.print_panel("No Dream Entries Found!", "bold yellow", "yellow", 25)
+            index = 0
+        else:
+            index = len(dream_files) - 1
+
+        # Store our command previously entered
+        command = ""
+
+        while True:
+            
+            clear()
+            
+            # Wrap index around if it goes out of bounds
+            index = index % len(dream_files) if dream_files else 0
+
+            if dream_files:
+                # Display the current dream entry in a panel
+                dream_file = dream_files[index]
+
+                try:
+                    with open(dream_file, 'r') as file:
+                        dream = Dream.from_file(file.read())
+                        
+                    # Index starts from 1
+                    current_index = index + 1
+                    total_entries = len(dream_files)
+                    
+                    # Display
+
+                    index_panel = Panel(
+                        Text(f"[{current_index} / {total_entries}]", justify="center"),
+                        title="Index",
+                        border_style="white",
+                        box=box.ROUNDED,
+                        width=17,
+                    )
+
+                    # Create a table for the title and date
+                    title_table = Table(border_style="white", box=box.ROUNDED, width=75)
+
+                    # Add columns to the table
+                    title_table.add_column("Dream Title", justify="left", style="italic", width=20)
+                    title_table.add_column("Dream Date", justify="left", style="italic", width=10)
+
+                    # Add a row with the dream title and date
+                    title_table.add_row(dream.title, dream.date)
+
+                    # Create a table for the stats
+                    stats_table = Table(border_style="white", box=box.SQUARE, width=75)
+                    stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
+                    stats_table.add_column("Value", justify="left", style="white", width=25)
+
+                    # Add rows for each stat
+                    stats_table.add_row("Dream Type", dream.dream_type)
+                    stats_table.add_row("Technique", dream.technique)
+                    stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+
+                    # Panel for the dream content
+                    content_panel = Panel(
+                        dream.entry,
+                        title="Dream Content",
+                        border_style="white",
+                        box=box.ROUNDED,
+                        width=75
+                    )
+
+                    # Print all content before commands
+                    TerminalClear.clear()
+                    self.print_title()
+                    console.print(index_panel)
+                    console.print(title_table)
+                    console.print(stats_table)
+                    console.print(content_panel)
+                except Exception as e:
+                    logs.log("ERROR", f"Error reading file: {os.path.basename(dream_file)} - {str(e)}")
+
+            # Create a horizontal table for the commands
+            command_table = Table(
+                show_header=False, box=box.SQUARE, border_style="white", width=75
+            )
+            command_table.add_column("Command", justify="center", style="bold green")
+            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (b)ackup | (s)ync | (q)uit")
+            console.print(command_table)
+            self.print_prompt(command)
+
+            # Ask user for input
+            user_command = self.getch().lower()
+            command = user_command
+
+            # Next File
+            if user_command == "n" and dream_files:
+                index -= 1
+                self.print_prompt(user_command)
+                
+            # Previous File
+            elif user_command == "p" and dream_files:
+                index += 1
+                self.print_prompt(user_command)
+                
+            # Create File
+            elif user_command == "c":
+                TerminalClear.clear()
+                self.print_title()
+                self.create_dream()
+                dream_files = self.list_files(self.journal_dir)[::-1]
+                index = len(dream_files) - 1
+            
+            # Edit File
+            elif user_command == "e" and dream_files:
+                self.print_prompt(user_command)
+                self.edit_dream(dream_files[index])
+                dream_files = self.list_files(self.journal_dir)[::-1]
+                
+            # Index File
+            elif user_command == "i" and dream_files:
+                # Getting our index location we want to navigate to
+                self.print_panel("Enter Index:", "white", "white", 14)
+                index_location = Prompt.ask("", show_default=False)
+                
+                try:
+                    index_location = int(index_location)
+                    if 0 <= index_location <= len(dream_files):
+                        index = index_location - 1
+                except Exception as e:
+                    pass
+                
+            # Delete File
+            elif user_command == "d" and dream_files:
+                random_number = random.randint(1000, 9999)
+        
+                # Display the prompt with the random number
+                self.print_panel(f"Enter Number To Delete Index [{index + 1}]: {random_number}", "bold red", "red", 75)
+                user_input = Prompt.ask("", show_default=False)
+                
+                # Check if the entered number matches the generated number
+                if user_input == str(random_number):
+                    self.delete_dream(dream_files[index])
+                    dream_files = self.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
+                    index = index - 1
+            
+            # Sync Files
+            elif user_command == "s":
+                # Ask for confirmation before syncing
+                self.print_panel("Do you want to sync your entries? (y/n):", "bold white", "white", 75)
+                sync_confirm = Prompt.ask("", show_default=False)
+                
+                if sync_confirm == "y":
+                    self.print_prompt(user_command)
+                    self.sync()  # Proceed with syncing
+                    dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
+                else:
+                    console.print("[bold yellow]Sync canceled.[/bold yellow]")
+                dream_files = self.list_files(self.journal_dir)[::-1]   
+                      
+            # Find Files
+            elif user_command == "f" and dream_files:
+                # Prompt the user for a search keyword
+                self.print_panel("Search Keyword:", "bold white", "white", 45)
+                search_keyword = Prompt.ask("", show_default=False)
+                
+                # Gather a list of files that match the search phrase along with their original index
+                matching_files = []
+                for index, file in enumerate(self.list_files(self.journal_dir)):
+                    with open(file, 'r') as f:
+                        content = f.read()
+                        # Use a regex to match whole words only (case-insensitive)
+                        if re.search(rf'\b{re.escape(search_keyword)}\b', content, flags=re.IGNORECASE):
+                            matching_files.append((file, index))
+
+                # Reverse the list of matching files
+                matching_files = matching_files[::-1]
+                
+                # If no matches found, log an error
+                if not matching_files:
+                    self.print_panel("No Matches For: {search_keyword}", "bold red", "red", 75)
+                    time.sleep(1)
+                else:
+                    search_index = len(matching_files) - 1
+
+                    # New search-based navigation
+                    while True:
+                        # Clear the terminal
+                        TerminalClear.clear()
+
+                        # Get the current dream file based on the search index
+                        search_dream_file, _ = matching_files[search_index]
+
+                        try:
+                            with open(search_dream_file, 'r') as file:
+                                dream = Dream.from_file(file.read())
+
+                            # Index starts from 1, not 0
+                            current_index = search_index + 1
+                            total_entries = len(matching_files)
+
+                            index_panel = Panel(
+                                Text(f"[{current_index} / {total_entries}]", justify="center"),
+                                title="Index",
+                                border_style="white",
+                                box=box.ROUNDED,
+                                width=17,
+                            )
+
+                            # Create a table for the title and date
+                            title_table = Table(border_style="white", box=box.ROUNDED, width=75)
+
+                            # Add columns to the table
+                            title_table.add_column("Dream Title", justify="left", style="italic", width=20)
+                            title_table.add_column("Dream Date", justify="left", style="italic", width=10)
+
+                            # Create a Text object for the title
+                            highlighted_title = Text(dream.title)
+
+                            # Highlight all occurrences of the search_keyword (case-insensitive)
+                            highlighted_title.highlight_regex(
+                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
+                                style="bold yellow"
+                            )
+
+                            # Add a row with the dream title and date
+                            title_table.add_row(highlighted_title, dream.date)
+
+                            # Create a table for the stats
+                            stats_table = Table(border_style="white", box=box.SQUARE, width=75)
+
+                            # Add columns to the table
+                            stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
+                            stats_table.add_column("Value", justify="left", style="white", width=25)
+
+                            # Add rows for each stat
+                            stats_table.add_row("Dream Type", dream.dream_type)
+                            stats_table.add_row("Technique", dream.technique)
+                            stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+
+                            # Create a Text object for the content
+                            highlighted_entry = Text(dream.entry)
+
+                            # Highlight all occurrences of the search_keyword (case-insensitive)
+                            highlighted_entry.highlight_regex(
+                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
+                                style="bold yellow"
+                            )
+
+                            # Panel for the dream content
+                            content_panel = Panel(
+                                highlighted_entry,
+                                title="Dream Content",
+                                border_style="white",
+                                box=box.ROUNDED,
+                                width=75
+                            )
+
+                            # Print all content before commands
+                            TerminalClear.clear()
+                            self.print_title()
+                            console.print(index_panel)
+                            console.print(title_table)
+                            console.print(stats_table)
+                            console.print(content_panel)
+
+                        except Exception as e:
+                            logs.log("ERROR", f"Error reading file: {os.path.basename(search_dream_file)} - {str(e)}")
+
+                        # Create a horizontal table for the commands
+                        command_table = Table(
+                            show_header=False, box=box.SQUARE, border_style="white", width=75
+                        )
+                        command_table.add_column("Command", justify="center", style="bold green")
+
+                        # Add the commands in a horizontal format
+                        command_table.add_row("(n)ext | (p)revious | (b)ack")
+                        console.print(command_table)
+
+                        # Ask user for input
+                        user_command = self.getch().lower()
+
+                        # Handle navigation commands
+                        if user_command == 'n':
+                            search_index = (search_index - 1) % len(matching_files)  # Move to the next result
+                        elif user_command == 'p':
+                            search_index = (search_index + 1) % len(matching_files)  # Move to the previous result
+                        elif user_command == 'b':
+                            break  # Exit the search navigation loop
+            
+            # Backup Files
+            elif user_command == "b" and dream_files:
+                # Ask for confirmation before syncing
+                self.print_panel("Do you want to backup your entries? (y/n):", "bold white", "white", 75)
+                backup_confirm = Prompt.ask("", show_default=False)
+                
+                if backup_confirm == "y":
+                    self.backup() 
+                else:
+                    console.print("[bold yellow]Sync canceled.[/bold yellow]")
+            
+            # Show Dream Statistics
+            elif user_command == "a" and dream_files:
+                pass
+            
+            # Quit Dream Journal
+            elif user_command == "q":
+                TerminalClear.clear()
+                break
+        pass
+    def run(self):
+        """Main loop for the Dream journal."""
+        self.navigate()
  
     # Function to create a dream
     def create_dream(self):
@@ -678,370 +998,3 @@ class DreamHandler:
         finally:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
-
-    # Function to navigate dreams
-    def navigate(self):
-        """
-        Navigate through dreams using a rich UI.
-        Commands:
-            [n]ext, [p]revious, [e]dit, [d]elete, [s]earch, [c]lear logs, [q]uit
-        """
-        
-        dream_files = self.list_files(self.journal_dir)[::-1]
-        
-        if not dream_files:
-            # Display a message if no dream entries are found
-            console.print(Panel("No Dream Entries Found!", style="bold yellow"))
-            index = 0  # No files, set index to 0
-        else:
-            index = len(dream_files) - 1
-
-        command = ""
-
-        while True:
-            TerminalClear.clear()
-
-            # Wrap index around if it goes out of bounds
-            index = index % len(dream_files) if dream_files else 0  # Avoid index error when no files
-
-            if dream_files:
-                # Display the current dream entry in a panel
-                dream_file = dream_files[index]
-
-                try:
-                    with open(dream_file, 'r') as file:
-                        dream = Dream.from_file(file.read())
-                        
-                    # Index starts from 1, not 0
-                    current_index = index + 1
-                    total_entries = len(dream_files)
-
-                    index_panel = Panel(
-                        Text(f"[{current_index} / {total_entries}]", justify="center"),
-                        title="Index",
-                        border_style="white",
-                        box=box.ROUNDED,
-                        width=17,
-                    )
-
-                    # Create a table for the title and date
-                    title_table = Table(border_style="white", box=box.ROUNDED, width=75)
-
-                    # Add columns to the table
-                    title_table.add_column("Dream Title", justify="left", style="italic", width=20)
-                    title_table.add_column("Dream Date", justify="left", style="italic", width=10)
-
-                    # Add a row with the dream title and date
-                    title_table.add_row(dream.title, dream.date)
-
-                    # Create a table for the stats
-                    stats_table = Table(border_style="white", box=box.SQUARE, width=75)
-                    stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
-                    stats_table.add_column("Value", justify="left", style="white", width=25)
-
-                    # Add rows for each stat
-                    stats_table.add_row("Dream Type", dream.dream_type)
-                    stats_table.add_row("Technique", dream.technique)
-                    stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
-
-                    # Panel for the dream content
-                    content_panel = Panel(
-                        dream.entry,
-                        title="Dream Content",
-                        border_style="white",
-                        box=box.ROUNDED,
-                        width=75
-                    )
-
-                    # Print all content before commands
-                    TerminalClear.clear()
-                    self.print_title()
-                    console.print(index_panel)
-                    console.print(title_table)
-                    console.print(stats_table)
-                    console.print(content_panel)
-
-                except Exception as e:
-                    error_message = f"Error reading file: {os.path.basename(dream_file)} - {str(e)}"
-                    console.print(Panel(error_message, style="bold red"))
-
-            # Create a horizontal table for the commands
-            command_table = Table(
-                show_header=False, box=box.SQUARE, border_style="white", width=75
-            )
-            command_table.add_column("Command", justify="center", style="bold green")
-
-            # Add the commands in a horizontal format
-            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (b)ackup | (s)ync | (q)uit")
-
-            # Display the commands table
-            console.print(command_table)
-            self.print_prompt(command)
-
-            # Ask user for input
-            user_command = self.getch().lower()
-            command = user_command
-
-            # Handle commands
-            if user_command == "n" and dream_files:
-                index -= 1
-                self.print_prompt(user_command)
-            elif user_command == "p" and dream_files:
-                index += 1
-                self.print_prompt(user_command)
-            elif user_command == "c":
-                TerminalClear.clear()
-                self.print_title()
-                self.create_dream()
-                dream_files = self.list_files(self.journal_dir)[::-1]
-                index = len(dream_files) - 1
-            elif user_command == "e" and dream_files:
-                self.print_prompt(user_command)
-                self.edit_dream(dream_files[index])
-                dream_files = self.list_files(self.journal_dir)[::-1]
-            elif user_command == "i" and dream_files:
-                # Getting our index location we want to navigate to
-                prompt_text = "[white]Enter Index[/white]"
-                prompt = Panel(prompt_text, width=14)
-                console.print(prompt)
-                index_location = Prompt.ask("", show_default=False)
-                try:
-                    index_location = int(index_location)
-                    if 0 <= index_location <= len(dream_files):
-                        index = index_location - 1
-                except Exception as e:
-                    pass
-            elif user_command == "d" and dream_files:
-                random_number = random.randint(1000, 9999)
-        
-                # Display the prompt with the random number
-                prompt_text = f"[bold red]Enter Number To Delete Entry {index + 1}: {random_number}[/bold red]"
-                prompt = Panel(prompt_text, width=75)
-                console.print(prompt)
-
-                # Ask the user for input
-                user_input = Prompt.ask("", show_default=False)
-                
-                # Check if the entered number matches the generated number
-                if user_input == str(random_number):
-                    prompt = Panel(prompt_text, width=40)
-                    console.print(prompt)
-                    self.print_prompt(user_command)
-                    self.delete_dream(dream_files[index])
-                    dream_files = self.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
-                    index = index - 1
-                else:
-                    console.print("[bold yellow]Incorrect number. Deletion canceled.[/bold yellow]")
-            elif user_command == "s":
-                # Ask for confirmation before syncing
-                prompt_text = f"[bold cyan]Do you want to sync your entries? (y/n):[/bold cyan]"
-                prompt = Panel(prompt_text, width=75)
-                console.print(prompt)
-                sync_confirm = Prompt.ask("", show_default=False)
-                
-                if sync_confirm == "y":
-                    self.print_prompt(user_command)
-                    self.sync()  # Proceed with syncing
-                    dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
-                else:
-                    console.print("[bold yellow]Sync canceled.[/bold yellow]")
-                dream_files = self.list_files(self.journal_dir)[::-1]         
-            elif user_command == "f" and dream_files:
-                # Prompt the user for a search keyword
-                search_keyword = Prompt.ask("[bold cyan]Search keyword:[/bold cyan]", show_default=False).strip()
-                
-                # Gather a list of files that match the search phrase along with their original index
-                matching_files = []
-                for index, file in enumerate(self.list_files(self.journal_dir)):
-                    with open(file, 'r') as f:
-                        content = f.read()
-                        # Use a regex to match whole words only (case-insensitive)
-                        if re.search(rf'\b{re.escape(search_keyword)}\b', content, flags=re.IGNORECASE):
-                            matching_files.append((file, index))
-
-                # Reverse the list of matching files
-                matching_files = matching_files[::-1]
-                
-                # If no matches found, log an error
-                if not matching_files:
-                    console.print(f"[bold red]No Matches For: {search_keyword}[/bold red]")
-                    time.sleep(1)
-                else:
-                    search_index = len(matching_files) - 1
-
-                    # New search-based navigation
-                    while True:
-                        # Clear the terminal
-                        TerminalClear.clear()
-
-                        # Get the current dream file based on the search index
-                        search_dream_file, _ = matching_files[search_index]
-
-                        try:
-                            with open(search_dream_file, 'r') as file:
-                                dream = Dream.from_file(file.read())
-
-                            # Index starts from 1, not 0
-                            current_index = search_index + 1
-                            total_entries = len(matching_files)
-
-                            index_panel = Panel(
-                                Text(f"[{current_index} / {total_entries}]", justify="center"),
-                                title="Index",
-                                border_style="white",
-                                box=box.ROUNDED,
-                                width=17,
-                            )
-
-                            # Create a table for the title and date
-                            title_table = Table(border_style="white", box=box.ROUNDED, width=75)
-
-                            # Add columns to the table
-                            title_table.add_column("Dream Title", justify="left", style="italic", width=20)
-                            title_table.add_column("Dream Date", justify="left", style="italic", width=10)
-
-                            # Create a Text object for the title
-                            highlighted_title = Text(dream.title)
-
-                            # Highlight all occurrences of the search_keyword (case-insensitive)
-                            highlighted_title.highlight_regex(
-                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
-                                style="bold yellow"
-                            )
-
-                            # Add a row with the dream title and date
-                            title_table.add_row(highlighted_title, dream.date)
-
-                            # Create a table for the stats
-                            stats_table = Table(border_style="white", box=box.SQUARE, width=75)
-
-                            # Add columns to the table
-                            stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
-                            stats_table.add_column("Value", justify="left", style="white", width=25)
-
-                            # Add rows for each stat
-                            stats_table.add_row("Dream Type", dream.dream_type)
-                            stats_table.add_row("Technique", dream.technique)
-                            stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
-
-                            # Create a Text object for the content
-                            highlighted_entry = Text(dream.entry)
-
-                            # Highlight all occurrences of the search_keyword (case-insensitive)
-                            highlighted_entry.highlight_regex(
-                                rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
-                                style="bold yellow"
-                            )
-
-                            # Panel for the dream content
-                            content_panel = Panel(
-                                highlighted_entry,
-                                title="Dream Content",
-                                border_style="white",
-                                box=box.ROUNDED,
-                                width=75
-                            )
-
-                            # Print all content before commands
-                            TerminalClear.clear()
-                            self.print_title()
-                            console.print(index_panel)
-                            console.print(title_table)
-                            console.print(stats_table)
-                            console.print(content_panel)
-
-                        except Exception as e:
-                            error_message = f"Error reading file: {os.path.basename(search_dream_file)} - {str(e)}"
-                            console.print(Panel(error_message, style="bold red"))
-
-                        # Create a horizontal table for the commands
-                        command_table = Table(
-                            show_header=False, box=box.SQUARE, border_style="white", width=75
-                        )
-                        command_table.add_column("Command", justify="center", style="bold green")
-
-                        # Add the commands in a horizontal format
-                        command_table.add_row("(n)ext | (p)revious | (b)ack")
-                        console.print(command_table)
-
-                        # Ask user for input
-                        user_command = self.getch().lower()
-
-                        # Handle navigation commands
-                        if user_command == 'n':
-                            search_index = (search_index - 1) % len(matching_files)  # Move to the next result
-                        elif user_command == 'p':
-                            search_index = (search_index + 1) % len(matching_files)  # Move to the previous result
-                        elif user_command == 'b':
-                            break  # Exit the search navigation loop
-            elif user_command == "b" and dream_files:
-               self.backup() 
-            elif user_command == "q":
-                TerminalClear.clear()
-                break
-
-    # Function to clear the terminal
-    def clear_terminal(self):
-        
-        TerminalClear.clear()
-        self.print_title()
-        panel = Panel(f"[bold green]Command[/bold green]: clear", expand=False)
-        console.print(panel)
-
-    # Function to display all commands [X]
-    def display_help(self):
-        '''
-        A function that displays all commands
-        '''
-
-        # Create, Navigate, Backup, Stats
-
-        
-        table = Table()
-
-        # Add columns
-        table.add_column("Commands", justify="left", style="bold green")
-        table.add_column("Description", justify="left")
-
-        # Program commands
-        table.add_row("[purple]'dream'[/purple]", "Opens your dream journal")
-        table.add_row("[yellow]'journal'[/yellow]", "Opens your journal")
-        
-        table.add_row("", "")
-        
-        table.add_row("[red]'clr_logs'[/red]", "Clears your logs")
-        
-        table.add_row("", "")
-
-        # Console commands
-        table.add_row("[green]'logs'[/green]", "Displays your logs")
-        table.add_row("[green]'help'[/green]", "Displays the help menu")
-        table.add_row("[green]'clear'[/green]", "Clear the terminal")
-        table.add_row("[green]'exit'[/green]", "Exit the program")
-
-        # Print the table
-        console.print(table)
-
-    # Function to handle commands from user  [X]
-    def handle_commands(self, input_command):
-        '''
-        A function that connects all commands to their functions
-        '''
-
-        commands = {
-            "help": self.display_help,
-            "clear": self.clear_terminal,
-            "quit": exit
-        }
-
-        command_func = commands.get(input_command)
-        if command_func:
-            command_func()
-        else:
-            self.print_unknown(input_command)
-
-    # Dream handler's main loop
-    def run(self):
-        """Main loop for the Dream journal."""
-
-        self.navigate()

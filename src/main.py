@@ -137,13 +137,13 @@ def clear_terminal():
 # Function to handle dream journal
 def dream_journal():
     # Run the dream journal sub task
-    dreams_dir = get_nested(settings, "directories.dreams", False)
-    dream_manager = DreamHandler(dreams_dir)
+    dream_manager = DreamHandler()
     dream_manager.run()
     
     # Once completed show title again to alert user they're in the hub
     print_title()
-    
+   
+# Function to exit the program 
 def quit_program():
     clear()
     sys.exit()
