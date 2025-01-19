@@ -801,6 +801,8 @@ class DreamHandler:
         """Main loop for the Dream journal."""
         self.navigate()
      
+    # TODO: Turn these all into a utils package, we'll need these for the journal handler as well
+     
     # Get the date from a file
     def extract_date_from_file(self, file_path):
         """
