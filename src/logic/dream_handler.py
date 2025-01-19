@@ -302,7 +302,7 @@ class DreamHandler:
                 
                 # If no matches found, log an error
                 if not matching_files:
-                    self.print_panel("No Matches For: {search_keyword}", "bold red", "red", 75)
+                    self.print_panel(f"No Matches For: {search_keyword}", "bold red", "red", 75)
                     time.sleep(1)
                 else:
                     search_index = len(matching_files) - 1
@@ -563,6 +563,12 @@ class DreamHandler:
         if edit_choice.lower() == 'y':
             self.edit_dream(new_path)
     
+    def delete_dream(self, file_path):
+        """Delete a dream entry by file path."""
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logs.log("INFO", f"[bold yellow]Deleted: {file_path}[/bold yellow]")
+    
     def sync(self):
         """
         Sync loads a .txt file and reads all the contents. It then
@@ -707,18 +713,93 @@ class DreamHandler:
         # Log the total files created
         logs.log("SUCCESS", f"[bold green]Sync.txt Was Loaded! Files Created [/bold green]: {files_created_count}")
     
+    def send_email(self, file_path):
+        '''
+        Sends the specified file via email.
+        '''
+
+        # Getting the email for the sender
+        SENDER_EMAIL = input("Enter the email of the sender: ")
+        # Getting the email for the reciever
+        RECIPIENT_EMAIL = input("Enter the email of the reciever: ")
+
+        # Google generated password, getting the sender_email is just extra security
+        # This is a throwaway email
+        SENDER_PASSWORD = 'zkgz avdi irab hwjg'
+
+        msg = MIMEMultipart()
+        msg['From'] = SENDER_EMAIL
+        msg['To'] = RECIPIENT_EMAIL
+        msg['Subject'] = 'Dream Vault Backup'
+
+        body = 'Please find the attached backup of your dream journal.'
+        msg.attach(MIMEText(body, 'plain'))
+
+        attachment = open(file_path, 'rb')
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename={os.path.basename(file_path)}')
+        msg.attach(part)
+        attachment.close()
+
+        try:
+            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+            server.starttls()
+            server.login(SENDER_EMAIL, SENDER_PASSWORD)
+            server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, msg.as_string())
+            server.quit()
+        except Exception as e:
+            logs.log("ERROR", f"[red]Failed to send email[/red]: {e}")
+
+    def backup(self):
+        '''
+        Backs up the dream journal files and sends the backup via email.
+        '''
+
+        # Let us get all the dream files
+        dream_files = self.list_files(self.journal_dir)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        backup_file_name = f"[{timestamp}]_Dream_Backup.txt"
+        output_file_path = os.path.join(BACKUP_DIRECTORY, backup_file_name)
+
+        with open(output_file_path, 'w') as output_file:  # Use 'w' to overwrite the file initially
+            output_file.write("==============================\n")
+
+        # Checking if we have any dreams
+        if not dream_files:
+            logs.log(f"\n[bold yellow]No Dream Entries Found To Backup[/bold yellow]\n")
+        else:
+            for file_path in dream_files:
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+                    for i, line in enumerate(lines):
+                        if line.startswith("[ ("):
+                            match = re.search(r'\[ \((.*?)\) \| \((.*?)\) \]', line)
+                            if match:
+                                title = match.group(1)
+                                date_str = match.group(2)
+                                formatted_output = f"[ ({title}) | ({date_str}) ]\n"
+
+                                # Join all lines except the last one in rest_of_content
+                                rest_of_content = ''.join(lines[i + 1:])
+
+                                full_output = formatted_output + rest_of_content
+                                
+                                full_output = re.sub(r"──────────────────────────────────────────────────────────────────────{35}", 
+                                "───────────────────────────────────────────────────────────────────────", full_output)
+
+                                with open(output_file_path, 'a') as output_file:
+                                    output_file.write(full_output)
+                                    output_file.write("\n\n==============================\n")
+
+        self.send_email(output_file_path)
+        logs.log("STATUS", f"[bold green]Backup Success [/bold green]: {backup_file_name}")
+    
     def run(self):
         """Main loop for the Dream journal."""
         self.navigate()
-    
-    # Deletion of a dream
-    def delete_dream(self, file_path):
-        """Delete a dream entry by file path."""
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            print(f"Deleted: {file_path}")
-        else:
-            print(f"File not found: {file_path}")
      
     # Get the date from a file
     def extract_date_from_file(self, file_path):
@@ -893,93 +974,6 @@ class DreamHandler:
 
         # Return only the file paths in the sorted order
         return [file_path for _, _, file_path in files]
-
-    # Function to send an email
-    def send_email(self, file_path):
-        '''
-        Sends the specified file via email.
-        '''
-
-        # Getting the email for the sender
-        SENDER_EMAIL = input("Enter the email of the sender: ")
-        # Getting the email for the reciever
-        RECIPIENT_EMAIL = input("Enter the email of the reciever: ")
-
-        # Google generated password, getting the sender_email is just extra security
-        # This is a throwaway email
-        SENDER_PASSWORD = 'zkgz avdi irab hwjg'
-
-        msg = MIMEMultipart()
-        msg['From'] = SENDER_EMAIL
-        msg['To'] = RECIPIENT_EMAIL
-        msg['Subject'] = 'Dream Vault Backup'
-
-        body = 'Please find the attached backup of your dream journal.'
-        msg.attach(MIMEText(body, 'plain'))
-
-        attachment = open(file_path, 'rb')
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f'attachment; filename={os.path.basename(file_path)}')
-        msg.attach(part)
-        attachment.close()
-
-        try:
-            server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-            server.starttls()
-            server.login(SENDER_EMAIL, SENDER_PASSWORD)
-            server.sendmail(SENDER_EMAIL, RECIPIENT_EMAIL, msg.as_string())
-            server.quit()
-            print("hello world")
-        except Exception as e:
-            logs.log("ERROR", f"[red]Failed to send email[/red]: {e}")
-
-    # Function to backup our dream and send it to our email
-    def backup(self):
-        '''
-        Backs up the dream journal files and sends the backup via email.
-        '''
-
-        # Let us get all the dream files
-        dream_files = self.list_files(self.journal_dir)
-
-        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        backup_file_name = f"[{timestamp}]_Dream_Backup.txt"
-        output_file_path = os.path.join(BACKUP_DIRECTORY, backup_file_name)
-
-        with open(output_file_path, 'w') as output_file:  # Use 'w' to overwrite the file initially
-            output_file.write("==============================\n")
-
-        # Checking if we have any dreams
-        if not dream_files:
-            console.log(f"\n[bold yellow]No Dream Entries Found[/bold yellow]\n")
-        else:
-            for file_path in dream_files:
-                with open(file_path, 'r') as file:
-                    lines = file.readlines()
-                    for i, line in enumerate(lines):
-                        if line.startswith("[ ("):
-                            match = re.search(r'\[ \((.*?)\) \| \((.*?)\) \]', line)
-                            if match:
-                                title = match.group(1)
-                                date_str = match.group(2)
-                                formatted_output = f"[ ({title}) | ({date_str}) ]\n"
-
-                                # Join all lines except the last one in rest_of_content
-                                rest_of_content = ''.join(lines[i + 1:])
-
-                                full_output = formatted_output + rest_of_content
-                                
-                                full_output = re.sub(r"──────────────────────────────────────────────────────────────────────{35}", 
-                                "───────────────────────────────────────────────────────────────────────", full_output)
-
-                                with open(output_file_path, 'a') as output_file:
-                                    output_file.write(full_output)
-                                    output_file.write("\n\n==============================\n")
-
-        self.send_email(output_file_path)
-        logs.log("STATUS", f"[bold green]Backing Up Success [/bold green]: {backup_file_name}")
 
     # Function to get instant input
     def getch(self):
