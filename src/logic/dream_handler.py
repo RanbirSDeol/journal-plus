@@ -90,7 +90,6 @@ class DreamHandler:
 
     # Print our command prompt
     def print_prompt(self, command):
-        console = Console()
         if not command:
             prompt_text = "[white]Command: [/white]"
             prompt = Panel(prompt_text, width=14)
@@ -102,21 +101,21 @@ class DreamHandler:
         
     # Print our command entered
     def print_command(self, user_command):
-        console = Console()
+        
         panel = Panel(f"[bold green]Command[/bold green]: {user_command}", expand=False)
         console.print(panel)
 
     # Print unknown command
     def print_unknown(self, input_command):
-        console = Console()
+        
         unknown_command = Panel(f"[bold red]Unknown Command[/bold red]: {input_command}", expand=False)
         console.print(unknown_command)
-
+ 
     # Function to create a dream
     def create_dream(self):
         """Create a new dream entry and save it in the desired folder structure."""
         
-        console = Console()
+        
         
         # Prompt the user for the date in MM/DD/YYYY format using Rich
         while True:
@@ -199,13 +198,15 @@ class DreamHandler:
         # Create a file name based on the title and timestamp
         file_name = f"{title.replace(' ', '_')}_{time_stamp}.txt"
         
+        entry_empty = "[ Dream Entry ]\n───────────────────────────────────────────────────────────────────────\n[]"
+        
         # Create a new Dream object
         dream = Dream(
             title=title,
             dream_type=dream_type,  # Dynamic now
             technique=technique,    # Dynamic now
             sleep_cycle=sleep_cycle,  # Dynamic now
-            entry="Empty Entry.",  # Static for now, can be updated
+            entry=entry_empty,  # Static for now, can be updated
             date=f"{day} {month_name}, {year}",  # Format date as "Month Day, Year"
             date_created=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         )
@@ -237,7 +238,7 @@ class DreamHandler:
         Edit the dream journal file using Emacs in the terminal.
         """
         
-        console = Console()
+        
         
         if os.path.exists(path):
             console.print(f"[bold green]Opening {path} for editing in Emacs...[/bold green]")
@@ -621,6 +622,7 @@ class DreamHandler:
         except Exception as e:
             logs.log("ERROR", f"[red]Failed to send email[/red]: {e}")
 
+    # Function to backup our dream and send it to our email
     def backup(self):
         '''
         Backs up the dream journal files and sends the backup via email.
@@ -663,7 +665,7 @@ class DreamHandler:
                                     output_file.write(full_output)
                                     output_file.write("\n\n==============================\n")
 
-        #self.send_email(output_file_path)
+        self.send_email(output_file_path)
         logs.log("STATUS", f"[bold green]Backing Up Success [/bold green]: {backup_file_name}")
 
     # Function to get instant input
@@ -684,7 +686,7 @@ class DreamHandler:
         Commands:
             [n]ext, [p]revious, [e]dit, [d]elete, [s]earch, [c]lear logs, [q]uit
         """
-        console = Console()
+        
         dream_files = self.list_files(self.journal_dir)[::-1]
         
         if not dream_files:
@@ -734,8 +736,6 @@ class DreamHandler:
 
                     # Create a table for the stats
                     stats_table = Table(border_style="white", box=box.SQUARE, width=75)
-
-                    # Add columns to the table
                     stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
                     stats_table.add_column("Value", justify="left", style="white", width=25)
 
@@ -829,6 +829,7 @@ class DreamHandler:
                     self.print_prompt(user_command)
                     self.delete_dream(dream_files[index])
                     dream_files = self.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
+                    index = index - 1
                 else:
                     console.print("[bold yellow]Incorrect number. Deletion canceled.[/bold yellow]")
             elif user_command == "s":
@@ -981,7 +982,7 @@ class DreamHandler:
 
     # Function to clear the terminal
     def clear_terminal(self):
-        console = Console()
+        
         TerminalClear.clear()
         self.print_title()
         panel = Panel(f"[bold green]Command[/bold green]: clear", expand=False)
@@ -995,7 +996,7 @@ class DreamHandler:
 
         # Create, Navigate, Backup, Stats
 
-        console = Console()
+        
         table = Table()
 
         # Add columns
