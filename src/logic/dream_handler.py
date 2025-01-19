@@ -194,7 +194,7 @@ class DreamHandler:
             os.makedirs(folder_path)
         
         # Generate timestamp for the file
-        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        time_stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         
         # Create a file name based on the title and timestamp
         file_name = f"{title.replace(' ', '_')}_{time_stamp}.txt"
@@ -580,6 +580,7 @@ class DreamHandler:
         # Return only the file paths in the sorted order
         return [file_path for _, _, file_path in files]
 
+    # Function to send an email
     def send_email(self, file_path):
         '''
         Sends the specified file via email.
@@ -628,11 +629,11 @@ class DreamHandler:
         # Let us get all the dream files
         dream_files = self.list_files(self.journal_dir)
 
-        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # Adjusted timestamp format
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         backup_file_name = f"[{timestamp}]_Dream_Backup.txt"
         output_file_path = os.path.join(BACKUP_DIRECTORY, backup_file_name)
 
-        with open(output_file_path, 'a') as output_file:
+        with open(output_file_path, 'w') as output_file:  # Use 'w' to overwrite the file initially
             output_file.write("==============================\n")
 
         # Checking if we have any dreams
@@ -654,11 +655,15 @@ class DreamHandler:
                                 rest_of_content = ''.join(lines[i + 1:])
 
                                 full_output = formatted_output + rest_of_content
+                                
+                                full_output = re.sub(r"──────────────────────────────────────────────────────────────────────{35}", 
+                                "───────────────────────────────────────────────────────────────────────", full_output)
 
                                 with open(output_file_path, 'a') as output_file:
                                     output_file.write(full_output)
-                                    output_file.write("\n==============================\n")
-        self.send_email(output_file_path)
+                                    output_file.write("\n\n==============================\n")
+
+        #self.send_email(output_file_path)
         logs.log("STATUS", f"[bold green]Backing Up Success [/bold green]: {backup_file_name}")
 
     # Function to get instant input

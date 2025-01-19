@@ -41,11 +41,11 @@ class Dream:
         """Format the dream into the template format."""
         dream_entry = f"""
 [ ({self.title}) | ({self.date}) ]
-──────────────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────
 Dream Type: {self.dream_type}
 Technique: {self.technique}
 Sleep Cycle: {self.sleep_cycle}
-──────────────────────────────────────────────────────────────────────
+───────────────────────────────────────────────────────────────────────
 {self.entry}
         """
         # Remove the leading whitespace using textwrap.dedent
