@@ -193,19 +193,70 @@ class DreamHandler:
 
                     # Create a table for the stats
                     stats_table = Table(border_style="white", box=box.SQUARE, width=75)
-                    stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
+                    stats_table.add_column("Statistics", justify="left", style="bold white", width=8)
                     stats_table.add_column("Value", justify="left", style="white", width=25)
 
-                    # Add rows for each stat
-                    stats_table.add_row("Dream Type", dream.dream_type)
-                    stats_table.add_row("Technique", dream.technique)
-                    stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+                    dream_type = dream.dream_type
+                    dream_type_colored = ""
+
+                    if "Lucid" in dream_type:
+                        dream_type_colored += f"[#FFD700]Lucid[/#FFD700] "
+                    if "Vivid" in dream_type:
+                        dream_type_colored += f"[#00FF00]Vivid[/#00FF00] "
+                    if "Nightmare" in dream_type:
+                        dream_type_colored += f"[#FF5733]Nightmare[/#FF5733] "
+                    if "Vague" in dream_type:
+                        dream_type_colored += f"[#708090]Vague[/#708090] "
+                    if "Vivimax" in dream_type:
+                        dream_type_colored += f"[#FF69B4]Vivimax[/#FF69B4] "
+                    if "No Recall" in dream_type:
+                        dream_type_colored += f"[#A9A9A9]No Recall[/#A9A9A9] "
+                    if "Normal" in dream_type:
+                        dream_type_colored += f"[#FFFFFF]Normal[/#FFFFFF] "
+                    if "N/A" in dream_type:
+                        dream_type_colored += f"[#ff0000]N/A[/#ff0000] "
+                    if "IE" in dream_type:
+                        dream_type_colored += f"[#FF8C00]IE[/#FF8C00] "
+
+                    # Trim extra space at the end
+                    dream_type_colored = dream_type_colored
+
+                    # Color the techniques
+                    technique = dream.technique
+                    if "WILD" in technique:
+                        technique = f"[#1E90FF]WILD[/#1E90FF]"
+                    elif "MILD" in technique:
+                        technique = f"[#ff0000]MILD[/#ff0000]"
+                    elif "SSILD" in technique:
+                        technique = f"[#FF7F50]SSILD[/#FF7F50]"
+                    elif "DILD" in technique:
+                        technique = f"[#32CD32]DILD[/#32CD32]"
+                    elif "N/A" in technique:
+                        technique = f"[#ff0000]N/A[/#ff0000]"
+
+                    # Color the sleep cycles
+                    sleep_cycle = dream.sleep_cycle
+                    if "Regular" in sleep_cycle:
+                        sleep_cycle = f"[gray]Regular[/gray]"
+                    elif "WBTB" in sleep_cycle:
+                        sleep_cycle = f"[#00BFFF]WBTB[/#00BFFF]"
+                    elif "Nap" in sleep_cycle:
+                        sleep_cycle = f"[#FFD700]Nap[/#FFD700]"
+                    elif "N/A" in sleep_cycle:
+                        sleep_cycle = f"[#ff0000]N/A[/#ff0000]"
+
+                    # Add rows for each stat with colored values
+                    stats_table.add_row("Dream Type", dream_type_colored)
+                    stats_table.add_row("Technique", technique)
+                    stats_table.add_row("Sleep Cycle", sleep_cycle)
+
+                    console.print(stats_table)
 
                     # Panel for the dream content
                     content_panel = Panel(
                         dream.entry,
                         title="Dream Content",
-                        border_style="white",
+                        style="white",
                         box=box.ROUNDED,
                         width=75
                     )
@@ -307,15 +358,21 @@ class DreamHandler:
                 
                 # Gather a list of files that match the search phrase along with their original index
                 matching_files = []
-                for index, file in enumerate(Helpers.list_files(self.journal_dir)):
+                '''for index, file in enumerate(Helpers.list_files(self.journal_dir)):
                     with open(file, 'r') as f:
                         content = f.read()
                         # Use a regex to match whole words only (case-insensitive)
                         if re.search(rf'\b{re.escape(search_keyword)}\b', content, flags=re.IGNORECASE):
-                            matching_files.append((file, index))
+                            matching_files.append((file, index))'''
+                            
+                for index, file in enumerate(dream_files):
+                    with open(file, 'r') as f:
+                        content = f.read().lower()
+                        if search_keyword.lower() in content:
+                            matching_files.append((file, index)) 
 
                 # Reverse the list of matching files
-                matching_files = matching_files[::-1]
+                matching_files = matching_files
                 
                 # If no matches found, log an error
                 if not matching_files:
@@ -328,9 +385,8 @@ class DreamHandler:
                     while True:
                         # Clear the terminal
                         TerminalClear.clear()
-
-                        # Get the current dream file based on the search index
-                        search_dream_file, _ = matching_files[search_index]
+                        
+                        search_dream_file, original_index = matching_files[search_index]
 
                         try:
                             with open(search_dream_file, 'r') as file:
@@ -341,11 +397,11 @@ class DreamHandler:
                             total_entries = len(matching_files)
 
                             index_panel = Panel(
-                                Text(f"[{current_index} / {total_entries}]", justify="center"),
-                                title="Index",
+                                Text(f"[{current_index} / {total_entries}] @ Index: {original_index + 1}", justify="center"),
+                                title="Search Results",
                                 border_style="white",
                                 box=box.ROUNDED,
-                                width=17,
+                                width=30,
                             )
 
                             # Create a table for the title and date
@@ -374,10 +430,59 @@ class DreamHandler:
                             stats_table.add_column("Statistics", justify="left", style="bold green", width=8)
                             stats_table.add_column("Value", justify="left", style="white", width=25)
 
-                            # Add rows for each stat
-                            stats_table.add_row("Dream Type", dream.dream_type)
-                            stats_table.add_row("Technique", dream.technique)
-                            stats_table.add_row("Sleep Cycle", dream.sleep_cycle)
+                            dream_type = dream.dream_type
+                            dream_type_colored = ""
+
+                            if "Lucid" in dream_type:
+                                dream_type_colored += f"[#FFD700]Lucid[/#FFD700] "
+                            if "Vivid" in dream_type:
+                                dream_type_colored += f"[#00FF00]Vivid[/#00FF00] "
+                            if "Nightmare" in dream_type:
+                                dream_type_colored += f"[#FF5733]Nightmare[/#FF5733] "
+                            if "Vague" in dream_type:
+                                dream_type_colored += f"[#708090]Vague[/#708090] "
+                            if "Vivimax" in dream_type:
+                                dream_type_colored += f"[#FF69B4]Vivimax[/#FF69B4] "
+                            if "No Recall" in dream_type:
+                                dream_type_colored += f"[#A9A9A9]No Recall[/#A9A9A9] "
+                            if "Normal" in dream_type:
+                                dream_type_colored += f"[#FFFFFF]Normal[/#FFFFFF] "
+                            if "N/A" in dream_type:
+                                dream_type_colored += f"[#ff0000]N/A[/#ff0000] "
+                            if "IE" in dream_type:
+                                dream_type_colored += f"[#FF8C00]IE[/#FF8C00] "
+
+                            # Trim extra space at the end
+                            dream_type_colored = dream_type_colored
+
+                            # Color the techniques
+                            technique = dream.technique
+                            if "WILD" in technique:
+                                technique = f"[#1E90FF]WILD[/#1E90FF]"
+                            elif "MILD" in technique:
+                                technique = f"[#ff0000]MILD[/#ff0000]"
+                            elif "SSILD" in technique:
+                                technique = f"[#FF7F50]SSILD[/#FF7F50]"
+                            elif "DILD" in technique:
+                                technique = f"[#32CD32]DILD[/#32CD32]"
+                            elif "N/A" in technique:
+                                technique = f"[#ff0000]N/A[/#ff0000]"
+
+                            # Color the sleep cycles
+                            sleep_cycle = dream.sleep_cycle
+                            if "Regular" in sleep_cycle:
+                                sleep_cycle = f"[gray]Regular[/gray]"
+                            elif "WBTB" in sleep_cycle:
+                                sleep_cycle = f"[#00BFFF]WBTB[/#00BFFF]"
+                            elif "Nap" in sleep_cycle:
+                                sleep_cycle = f"[#FFD700]Nap[/#FFD700]"
+                            elif "N/A" in sleep_cycle:
+                                sleep_cycle = f"[#ff0000]N/A[/#ff0000]"
+
+                            # Add rows for each stat with colored values
+                            stats_table.add_row("Dream Type", dream_type_colored)
+                            stats_table.add_row("Technique", technique)
+                            stats_table.add_row("Sleep Cycle", sleep_cycle)
 
                             # Create a Text object for the content
                             highlighted_entry = Text(dream.entry)
@@ -385,7 +490,7 @@ class DreamHandler:
                             # Highlight all occurrences of the search_keyword (case-insensitive)
                             highlighted_entry.highlight_regex(
                                 rf"(?i){re.escape(search_keyword)}",  # (?i) makes it case-insensitive
-                                style="bold yellow"
+                                style="underline bold yellow"
                             )
 
                             # Panel for the dream content
