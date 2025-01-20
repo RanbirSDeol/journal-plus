@@ -13,12 +13,17 @@ import tty
 import time
 import random
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from collections import Counter
+import matplotlib.pyplot as plt
+from collections import Counter
+from datetime import datetime
+from matplotlib.ticker import MaxNLocator
 
 # Classes
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -117,7 +122,15 @@ class DreamHandler:
      
     # | Program | 
     def navigate(self):
-        """Function to navigate through our dream journal"""
+        """
+        Function to navigate through our dream journal
+        
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
         
         # Our files
         dream_files = Helpers.list_files(self.journal_dir)[::-1]
@@ -399,7 +412,7 @@ class DreamHandler:
                         command_table.add_column("Command", justify="center", style="bold green")
 
                         # Add the commands in a horizontal format
-                        command_table.add_row("(n)ext | (p)revious | (b)ack")
+                        command_table.add_row("(n)ext | (p)revious | (q)uit")
                         console.print(command_table)
 
                         # Ask user for input
@@ -410,7 +423,7 @@ class DreamHandler:
                             search_index = (search_index - 1) % len(matching_files)  # Move to the next result
                         elif user_command == 'p':
                             search_index = (search_index + 1) % len(matching_files)  # Move to the previous result
-                        elif user_command == 'b':
+                        elif user_command == 'q':
                             break  # Exit the search navigation loop
             
             # Backup Files
@@ -426,7 +439,7 @@ class DreamHandler:
             
             # Show Dream Statistics
             elif user_command == "a" and dream_files:
-                pass
+                self.statistics()
             
             # Quit Dream Journal
             elif user_command == "q":
@@ -437,6 +450,12 @@ class DreamHandler:
     def edit_dream(self, path):
         """
         Edit the dream journal file using Emacs in the terminal.
+        
+        Arguments:
+            path (str): The directory to scan for dream files.
+
+        Returns:
+            None
         """
         
         if os.path.exists(path):
@@ -454,7 +473,15 @@ class DreamHandler:
             console.print(f"[bold red]The file {path} does not exist.[/bold red]")
     
     def create_dream(self):
-        """Create a new dream entry and save it in the desired folder structure."""
+        """
+        Create a new dream entry and save it in the desired folder structure.
+        
+        Arguments:
+            None
+
+        Returns:
+            None
+        """
 
         # Prompt the user for the date in MM/DD/YYYY format using Rich
         while True:
@@ -564,11 +591,164 @@ class DreamHandler:
         if edit_choice.lower() == 'y':
             self.edit_dream(new_path)
     
-    def delete_dream(self, file_path):
-        """Delete a dream entry by file path."""
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logs.log("INFO", f"[bold yellow]Deleted: {file_path}[/bold yellow]")
+    def delete_dream(self, path):
+        """
+        Delete a dream entry by file path.
+        
+        Arguments:
+            path (str): The directory to scan for dream files.
+
+        Returns:
+            None
+        """
+        if os.path.exists(path):
+            os.remove(path)
+            logs.log("INFO", f"[bold yellow]Deleted: {path}[/bold yellow]")
+
+    def display_counter(self, counter, title):
+        self.print_panel(f"{title}", "bold white", "white", 35)
+        table = Table()
+        table.add_column("Type", justify="left")
+        table.add_column("Count", justify="right")
+
+        # Sort the counter by count (value) in descending order
+        sorted_items = sorted(counter.items(), key=lambda item: item[1], reverse=True)
+
+        # Add rows to the table, excluding any items with a '+'
+        for key, value in sorted_items:
+            if '+' not in key:
+                table.add_row(key, str(value))
+
+        # Display the table
+        console.print(table)
+
+    def statistics(self):
+        '''
+        A function that goes through all the dream entries and returns the following statistics:
+        - Dream Journals: X
+        - All Categories:
+            - Dream Types: {dream_types}
+            - Techniques: {techniques}
+            - Sleep Cycles: {sleep_cycles}
+        - Streak: X
+        '''
+        exit_loop = False
+
+        while not exit_loop:
+            
+            dream_type_count = Counter()
+            technique_count = Counter()
+            sleep_cycle_count = Counter()
+
+            dream_dates = []  # List to store the dates of the dream entries
+            dream_files = Helpers.list_files(self.journal_dir)
+
+            if not dream_files:
+                console.print(f"[yellow]No Dream Entries Found[/yellow]\n")
+                return  # Early exit since there are no entries to process
+
+            for file_path in dream_files:
+                with open(file_path, 'r') as file:
+                    lines = file.readlines()
+
+                    for i, line in enumerate(lines):
+                        # Color the dream types
+                        if i == 2 and "Lucid" in line:
+                            line = line.replace("Lucid", f"[#FFD700]Lucid[/#FFD700]")
+                        if i == 2 and "Vivid" in line:
+                            line = line.replace("Vivid", f"[#00FF00]Vivid[/#00FF00]")
+                        if i == 2 and "Nightmare" in line:
+                            line = line.replace("Nightmare", f"[#FF5733]Nightmare[/#FF5733]")
+                        if i == 2 and "Vague" in line:
+                            line = line.replace("Vague", f"[#708090]Vague[/#708090]")
+                        if i == 2 and "Vivimax" in line:
+                            line = line.replace("Vivimax", f"[#FF69B4]Vivimax[/#FF69B4]")
+                        if i == 2 and "No Recall" in line:
+                            line = line.replace("No Recall", f"[#A9A9A9]No Recall[/#A9A9A9]")
+                        if i == 2 and "Normal" in line:
+                            line = line.replace("Normal", f"[#FFFFFF]Normal[/#FFFFFF]")
+                        if i == 2 and "N/A" in line:
+                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
+                        if i == 2 and "IE" in line:
+                            line = line.replace("IE", f"[#FF8C00]IE[/#FF8C00]")
+
+                        # Color the dream techniques
+                        if i == 3 and "WILD" in line:
+                            line = line.replace("WILD", f"[#1E90FF]WILD[/#1E90FF]")
+                        if i == 3 and "MILD" in line:
+                            line = line.replace("MILD", f"[#ff0000]MILD[/#ff0000]")
+                        if i == 3 and "SSILD" in line:
+                            line = line.replace("SSILD", f"[#FF7F50]SSILD[/#FF7F50]")
+                        if i == 3 and "DILD" in line:
+                            line = line.replace("DILD", f"[#32CD32]DILD[/#32CD32]")
+
+                        # Color the sleep cycles
+                        if i == 4 and "Regular" in line:
+                            line = line.replace("Regular", f"[gray]Regular[/gray]")
+                        if i == 4 and "WBTB" in line:
+                            line = line.replace("WBTB", f"[#00BFFF]WBTB[/#00BFFF]")
+                        if i == 4 and "Nap" in line:
+                            line = line.replace("Nap", f"[#9370DB]Nap[/#9370DB]")
+
+                        # Update counters
+                        if i == 2:
+                            dream_types = line.split("Dream Type:")[1].strip().split(", ")
+                            dream_type_count.update(dream_types)
+                        elif i == 3:
+                            techniques = line.split("Technique:")[1].strip().split(", ")
+                            technique_count.update(techniques)
+                        elif i == 4:
+                            sleep_cycles = line.split("Sleep Cycle:")[1].strip().split(", ")
+                            sleep_cycle_count.update(sleep_cycles)
+
+                        # Store the date of the dream entry (assuming the date is on line 1)
+                        if i == 0:
+                            # Extract the date using Helpers.extract_date_from_file
+                            date_str = line.split("|")[1].strip().replace("(", "").replace(")", "").replace(" ]", "")
+                            logs.log("DEBUG", date_str)
+                            try:
+                                # Parse the date format (e.g., 19 January, 2025)
+                                dream_dates.append(datetime.strptime(date_str, '%d %B, %Y'))
+                            except ValueError:
+                                pass  # If the date format is not valid, skip this entry
+
+            max_streak = 0
+            
+            # Calculate the streak
+            if dream_dates:
+                logs.log("DEBUG", f"DREAM DATES FOUND {dream_dates}")
+                dream_dates.sort()
+                streak = 1
+                max_streak = 1
+
+                for i in range(1, len(dream_dates)):
+                    # Check if the date is the previous day (streak continuation)
+                    if (dream_dates[i] - dream_dates[i-1]).days == 1:
+                        streak += 1
+                    else:
+                        streak = 1
+                    max_streak = max(max_streak, streak)
+
+            # Prepare statistics output
+            num_dream_journals = len(dream_files)
+
+            clear()
+            self.print_panel(f"Analytics", "bold green", "green", 13)
+            self.print_panel(f"[bold #FFD700]Streak[/bold #FFD700]: {max_streak}", "bold white", "white", 15)
+            self.display_counter(dream_type_count, "Dream Type Counts")
+            self.display_counter(technique_count, "Technique Counts")
+            self.display_counter(sleep_cycle_count, "Sleep Cycle Counts")
+            
+            command_table = Table(
+                show_header=False, box=box.SQUARE, border_style="white", width=10
+            )
+            command_table.add_column("Command", justify="center", style="bold green")
+            command_table.add_row("(q)uit")
+            console.print(command_table)
+            user_command = Helpers.getch().lower()
+
+            if user_command == "q":
+                break
     
     def sync(self):
         """
@@ -800,4 +980,4 @@ class DreamHandler:
     
     def run(self):
         """Main loop for the Dream journal."""
-        self.navigate()
+        self.navigate() 
