@@ -185,8 +185,8 @@ class DreamHandler:
                     title_table = Table(border_style="white", box=box.ROUNDED, width=75)
 
                     # Add columns to the table
-                    title_table.add_column("Dream Title", justify="left", style="italic", width=20)
-                    title_table.add_column("Dream Date", justify="left", style="italic", width=10)
+                    title_table.add_column("Dream Title", justify="left", width=20)
+                    title_table.add_column("Dream Date", justify="left", width=10)
 
                     # Add a row with the dream title and date
                     title_table.add_row(dream.title, dream.date)
@@ -324,13 +324,18 @@ class DreamHandler:
             # Index File
             elif user_command == "i" and dream_files:
                 # Getting our index location we want to navigate to
-                self.print_panel("Enter Index:", "white", "white", 14)
+                self.print_panel("Enter Index ('r' for random):", "white", "white", 38)
                 index_location = Prompt.ask("", show_default=False)
                 
                 try:
-                    index_location = int(index_location)
-                    if 0 <= index_location <= len(dream_files):
-                        index = index_location - 1
+                    if index_location == "r":
+                        index_location = random.randint(0, len(dream_files) - 1)
+                        if 0 <= index_location <= len(dream_files):
+                            index = index_location - 1
+                    else:
+                        index_location = int(index_location)
+                        if 0 <= index_location <= len(dream_files):
+                            index = index_location - 1
                 except Exception as e:
                     pass
                 
@@ -567,16 +572,12 @@ class DreamHandler:
                     self.print_panel("Lucid Graph or Dream Graph: (L/D)", "bold white", "white", 75)
                     type_graph = Prompt.ask("", show_default=False)
                     type_graph = type_graph.lower()
-                    
-                    #self.print_panel("Graph Type ('bar' or 'line'): ", "bold white", "white", 75)
-                    #graph_display = Prompt.ask("", show_default=False)
-                    #graph_display = type_graph.lower()
-                    
+
                     self.print_panel("START MONTH/YEAR (e.g., 1,2024): ", "bold white", "white", 75)
                     start_month_year = Prompt.ask("", show_default=False)
                     start_month, start_year = map(int, start_month_year.split(','))
 
-                    self.print_panel("END MONTH/YEAR (e.g., 5,2025): ", "bold white", "white", 75)
+                    self.print_panel("END MONTH/YEAR (e.g., 1,2025): ", "bold white", "white", 75)
                     end_month_year = Prompt.ask("", show_default=False)
                     end_month, end_year = map(int, end_month_year.split(','))
 
@@ -827,6 +828,8 @@ class DreamHandler:
                             line = line.replace("SSILD", f"[#FF7F50]SSILD[/#FF7F50]")
                         if i == 3 and "DILD" in line:
                             line = line.replace("DILD", f"[#32CD32]DILD[/#32CD32]")
+                        if i == 3 and "N/A" in line:
+                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
 
                         # Color the sleep cycles
                         if i == 4 and "Regular" in line:
@@ -835,6 +838,8 @@ class DreamHandler:
                             line = line.replace("WBTB", f"[#00BFFF]WBTB[/#00BFFF]")
                         if i == 4 and "Nap" in line:
                             line = line.replace("Nap", f"[#9370DB]Nap[/#9370DB]")
+                        if i == 4 and "N/A" in line:
+                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
 
                         # Update counters
                         if i == 2:
