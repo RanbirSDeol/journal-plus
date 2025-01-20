@@ -573,7 +573,7 @@ class DreamHandler:
                     elif (type_graph == 'd'):
                         self.dream_graph(start_month, start_year, end_month, end_year)
                 except Exception as e:
-                    logs.log("ERROR", "[bold red]Error attempting to load graph: {e}[/bold red]")
+                    pass
             
             # Quit Dream Journal
             elif user_command == "q":

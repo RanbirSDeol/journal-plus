@@ -81,7 +81,6 @@ def login():
             
             if user_input.lower() == 'q':
                 console.print("[bold red]Exiting program...[/bold red]")
-                break  # Exit the loop if user presses 'q'
         else:
             # Create a Progress object
             clear()
@@ -164,8 +163,8 @@ def journal():
    
 # Function to update the program
 def update():
-    logs.log("UPDATE", f"Attemping Update!")
-    
+    logs.log("UPDATE", f"Attempting Update!")
+
     # Create a Progress bar instance
     with Progress() as progress:
         # Add the task with a description
@@ -181,12 +180,23 @@ def update():
             time.sleep(0.1)
 
         # After fetch, perform a pull to update the working directory
-        subprocess.run(["git", "pull"], check=True)
+        try:
+            result = subprocess.run(
+                ["git", "pull"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            print(result.stdout.decode())
+            print(result.stderr.decode())
+        except subprocess.CalledProcessError as e:
+            logs.log("UPDATE", f"[bold red]Update failed with error: {e.stderr.decode()}[/bold red]")
+            console.log(f"[bold red]Error during git pull: {e.stderr.decode()}[/bold red]")
+            return
 
         # Complete the progress bar
         progress.update(task, completed=100)
 
-        
     logs.log("UPDATE", f"[bold green]Update Success![/bold green]")
     console.log("[bold green]Program updated successfully![/bold green]")
     time.sleep(1)
