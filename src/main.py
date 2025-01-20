@@ -221,8 +221,8 @@ def update():
             # Complete the progress bar
             progress.update(task, completed=100)
             
-            print("[bold green]Update Success![/bold green]")  # For success message
-            clear()  # Clean the console
+            print("[bold green]Update Success! Please restart program[/bold green]")  # For success message
+            sys.exit()  # Exit, and make the user reload
         except subprocess.CalledProcessError as e:
             print(f"[bold red]Error occurred while updating: {e}[/bold red]")
    
