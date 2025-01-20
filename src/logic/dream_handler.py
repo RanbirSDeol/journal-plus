@@ -1,5 +1,5 @@
-# Dream class
-# This class will handle the dream journal
+# Dream Handler class
+# This class will handle everything to do with dream journals
 # @RanbirSDeol
 # 1/17/2025
 
@@ -46,53 +46,19 @@ with open(settings_file_path, 'r') as file:
 SMTP_SERVER = config['smtp']['server']
 SMTP_PORT = config['smtp']['port']
 JOURNAL_DIR = config['directories']['dreams']
-SYNC_SPEED = 0.05 # Change to settings | Slow it is, the more reliable the sync is
+SYNC_FILE = config['paths']['dream-sync']
+TEXT_EDITOR = config["editor"].split()
+BACKUP_DIRECTORY = config['directories']['backups']
 
-# A list of all the months, to be used to convert number month to word month
-MONTHS = [
-    None, 'January', 'February', 'March', 'April', 'May', 
-    'June', 'July', 'August', 'September', 'October', 'November', 'December'
-]
-
-# A list of all the months mapped to a number, used to convert word months to numbers
-MONTHS_REVERSED = {
-    "January": '01',
-    "February": '02',
-    "March": '03',
-    "April": '04',
-    "May": '05',
-    "June": '06',
-    "July": '07',
-    "August": '08',
-    "September": '09',
-    "October": '10',
-    "November": '11',
-    "December": '12'
-}
-
-# Vars
-console = Console()
-
-# Global constants
+# Consts
+SYNC_SPEED = 0.05
 PROGRAM_TITLE = "Dream Journal"
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Construct the path to sync-dream.txt in the grandparent directory
-sync_file_path = os.path.join(script_dir, '..', '..', 'data', 'sync-dream.txt')
-backup_file_path = os.path.join(script_dir, '..', '..', 'data', 'backups')
-
-# Use the dynamically constructed path for the SYNC_FILE
-SYNC_FILE = sync_file_path
-BACKUP_DIRECTORY = backup_file_path
-
-settings_path = os.path.join(script_dir, '..', 'settings.json')
-# Pass the dynamically constructed path to the Logger
-logs = Logger(settings_file=settings_path)
-
+# Variables
+console = Console()
+logs = Logger(settings_file=settings_file_path)
 
 # Local Function
-        
 def clear():
     console.clear()
 
@@ -100,7 +66,7 @@ class DreamHandler:
     def __init__(self):
         self.journal_dir = JOURNAL_DIR
     
-    # | Local Functions |
+    # | Local Handler Functions |
     def print_panel(self, content, color, style, width):
         panel = Panel(f"[{color}]{content}[/{color}]", style=f"bold {style}", width=width)
         console.print(panel)
@@ -607,7 +573,9 @@ class DreamHandler:
         
         if os.path.exists(path):
             # Define the command to open the file in Emacs in the terminal
-            TEXT_EDITOR = ["emacs", "-nw", path]
+            TEXT_EDITOR.append(path)
+            
+            logs.log("DEBUG", f"{TEXT_EDITOR}")
             
             try:
                 # Use subprocess to open the file in Emacs
@@ -1293,7 +1261,7 @@ class DreamHandler:
         msg = MIMEMultipart()
         msg['From'] = SENDER_EMAIL
         msg['To'] = RECIPIENT_EMAIL
-        msg['Subject'] = 'Dream Vault Backup'
+        msg['Subject'] = 'Journal Plus - Dream Journal Backup'
 
         body = 'Please find the attached backup of your dream journal.'
         msg.attach(MIMEText(body, 'plain'))

@@ -142,6 +142,15 @@ def dream_journal():
     
     # Once completed show title again to alert user they're in the hub
     print_title()
+    
+# Function to handle journal
+def journal():
+    # Run the dream journal sub task
+    journal_manager = JournalHandler()
+    journal_manager.run()
+    
+    # Once completed show title again to alert user they're in the hub
+    print_title()
    
 # Function to exit the program 
 def quit_program():
@@ -156,11 +165,15 @@ def handle_commands(input_command):
 
     commands = {
         "dream": dream_journal,
+        "d": dream_journal, # shortcut
+        "journal": journal,
+        "j": journal, # shortcut
         "logs": logs.display,
         "clr_logs": logs.clear,
         "help": display_help,
         "clear": clear_terminal,
-        "quit": quit_program
+        "quit": quit_program,
+        "q": quit_program # shortcut
     }
 
     command_func = commands.get(input_command)

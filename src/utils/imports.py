@@ -15,6 +15,7 @@ from services.clear import TerminalClear
 from services.loader import Loader
 from services.logs import Logger
 from logic.dream_handler import DreamHandler
+from logic.journal_handler import JournalHandler
 
 # Packages
 import sys

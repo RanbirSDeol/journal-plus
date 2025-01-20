@@ -3,13 +3,13 @@
     "directories": {
         "root": "../data",
         "dreams": "../data/dreams",
-        "journal": "../data/journal",
+        "journals": "../data/journals",
         "backups": "../data/backups"
     },
     "paths": {
         "logs": "../data/logs.txt",
         "dream-sync": "../data/sync-dream.txt",
-        "template": "../template.txt"
+        "journal-sync": "../data/sync-journal.txt"
     },
     "editor": "emacs -nw",
     "display": {
