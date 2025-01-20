@@ -24,6 +24,9 @@ import matplotlib.pyplot as plt
 from collections import Counter
 from datetime import datetime
 from matplotlib.ticker import MaxNLocator
+import numpy as np
+from collections import defaultdict
+from datetime import datetime
 
 # Classes
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -222,7 +225,7 @@ class DreamHandler:
                 show_header=False, box=box.SQUARE, border_style="white", width=75
             )
             command_table.add_column("Command", justify="center", style="bold green")
-            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (b)ackup | (s)ync | (q)uit")
+            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (g)raph | (b)ackup | (s)ync | (q)uit")
             console.print(command_table)
             self.print_prompt(command)
 
@@ -440,6 +443,31 @@ class DreamHandler:
             # Show Dream Statistics
             elif user_command == "a" and dream_files:
                 self.statistics()
+            
+            elif user_command == "g" and dream_files:
+                try:
+                    self.print_panel("Lucid Graph or Dream Graph: (L/D)", "bold white", "white", 75)
+                    type_graph = Prompt.ask("", show_default=False)
+                    type_graph = type_graph.lower()
+                    
+                    #self.print_panel("Graph Type ('bar' or 'line'): ", "bold white", "white", 75)
+                    #graph_display = Prompt.ask("", show_default=False)
+                    #graph_display = type_graph.lower()
+                    
+                    self.print_panel("START MONTH/YEAR (e.g., 1,2024): ", "bold white", "white", 75)
+                    start_month_year = Prompt.ask("", show_default=False)
+                    start_month, start_year = map(int, start_month_year.split(','))
+
+                    self.print_panel("END MONTH/YEAR (e.g., 5,2025): ", "bold white", "white", 75)
+                    end_month_year = Prompt.ask("", show_default=False)
+                    end_month, end_year = map(int, end_month_year.split(','))
+
+                    if (type_graph == 'l'):
+                        self.lucid_graph(start_month, start_year, end_month, end_year)
+                    elif (type_graph == 'd'):
+                        self.dream_graph(start_month, start_year, end_month, end_year)
+                except Exception as e:
+                    logs.log("ERROR", "[bold red]Error attempting to load graph: {e}[/bold red]")
             
             # Quit Dream Journal
             elif user_command == "q":
@@ -749,7 +777,232 @@ class DreamHandler:
 
             if user_command == "q":
                 break
-    
+
+    def lucid_graph(self, start_month, start_year, end_month, end_year, graph_type="bar"):
+        '''
+        A function that generates a graph showing the number of Lucid dreams in the specified range of months and years.
+        You can choose between 'bar' or 'line' graph styles.
+        '''
+        # Initialize a dictionary to store counts of dream types for each day
+        dream_data = defaultdict(lambda: defaultdict(int))  # {day: {dream_type: count}}
+
+        # Start and end date for the range
+        start_date = datetime(start_year, start_month, 1)
+        end_date = datetime(end_year, end_month, 1)
+        if end_month == 12:
+            end_date = datetime(end_year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(end_year, end_month + 1, 1) - timedelta(days=1)
+
+        # Get the list of dream files
+        dream_files = Helpers.list_files(self.journal_dir)
+
+        if not dream_files:
+            console.print(f"[yellow]No Dream Entries Found[/yellow]\n")
+            return  # Early exit if no dream entries
+
+        # Iterate over the dream files to extract dream types and their corresponding dates
+        for file_path in dream_files:
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+
+                for i, line in enumerate(lines):
+                    # Extract the dream type and date
+                    if i == 2:
+                        dream_type = None
+                        if "Lucid" in line:
+                            dream_type = "Lucid"
+                        elif "Vivid" in line:
+                            dream_type = "Vivid"
+                        elif "Vivimax" in line:
+                            dream_type = "Vivimax"
+
+                        if dream_type:
+                            # Extract date from the first line (assuming date is on line 1)
+                            date_str = lines[0].split("|")[1].strip().replace("(", "").replace(")", "").replace(" ]", "")
+                            try:
+                                # Parse the date format (e.g., 19 January, 2025)
+                                dream_date = datetime.strptime(date_str, '%d %B, %Y')
+                                if start_date <= dream_date <= end_date:
+                                    day_str = dream_date.strftime('%Y-%m-%d')  # Use string date for dictionary keys
+                                    dream_data[day_str][dream_type] += 1
+                            except ValueError:
+                                pass  # Skip if date format is invalid
+
+        # Prepare the data for plotting
+        days = sorted(dream_data.keys())  # Sorted list of days
+
+        if not days:
+            console.print(f"[yellow]No Dreams Recorded in the selected range[/yellow]\n")
+            return  # Early exit if no dreams in the selected range
+
+        # Filter out days with no "Lucid" dreams
+        valid_days = [day for day in days if dream_data[day].get("Lucid", 0) > 0]
+
+        # Count the total number of Lucid dreams
+        total_lucid = sum(dream_data[day].get("Lucid", 0) for day in valid_days)
+
+        # Set up the plot
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Set the background color to white
+        fig.patch.set_facecolor('white')  # Background of the entire figure
+        ax.set_facecolor('white')  # Background of the plotting area
+
+        # Plotting the Lucid dreams (no Vivid or Vivimax)
+        lucid_counts = [dream_data[day].get("Lucid", 0) for day in valid_days]
+        ax.bar(valid_days, lucid_counts, label="Lucid", color="#FFD700", width=0.5, alpha=0.7, edgecolor="black")
+
+        # Labeling
+        ax.set_xlabel('Date', color='black')
+        ax.set_ylabel('Number of Dreams', color='black')
+        ax.set_title(f'Lucid Dreams from {start_month}/{start_year} to {end_month}/{end_year}: [{total_lucid} total lucid dreams]', color='black')
+        ax.set_xticks(valid_days)
+        ax.set_xticklabels(valid_days, rotation=45, color='black')
+
+        # Make grid lines white and make them visible
+        ax.grid(True, color='black', linestyle='--', linewidth=0.5)
+
+        # Set the ticks' color to black
+        ax.tick_params(axis='both', labelcolor='black')
+
+        # Set the axis lines to black
+        ax.spines['top'].set_color('black')
+        ax.spines['right'].set_color('black')
+        ax.spines['bottom'].set_color('black')
+        ax.spines['left'].set_color('black')
+
+        # Add a legend with white labels
+        ax.legend()
+
+        # Adjust layout and show the plot
+        plt.tight_layout()
+        plt.show()
+
+    def dream_graph(self, start_month, start_year, end_month, end_year, graph_type="bar"):
+        '''
+        A function that generates a graph showing the number of dream entries per day in the specified range of months and years.
+        The bars/lines are colored based on the number of dream entries for that day.
+        Empty days are also shown.
+        '''
+        # Initialize a dictionary to store counts of dream entries for each day
+        dream_entries = defaultdict(int)  # {day: number_of_entries}
+
+        # Start and end date for the range
+        start_date = datetime(start_year, start_month, 1)
+        end_date = datetime(end_year, end_month, 1)
+        if end_month == 12:
+            end_date = datetime(end_year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = datetime(end_year, end_month + 1, 1) - timedelta(days=1)
+
+        # Get the list of dream files
+        dream_files = Helpers.list_files(self.journal_dir)
+
+        if not dream_files:
+            console.print(f"[yellow]No Dream Entries Found[/yellow]\n")
+            return  # Early exit if no dream entries
+
+        # Iterate over the dream files to count the number of entries per day
+        for file_path in dream_files:
+            with open(file_path, 'r') as file:
+                lines = file.readlines()
+
+                for i, line in enumerate(lines):
+                    # Extract date from the first line (assuming date is on line 1)
+                    if i == 0:
+                        date_str = lines[0].split("|")[1].strip().replace("(", "").replace(")", "").replace(" ]", "")
+                        try:
+                            # Parse the date format (e.g., 19 January, 2025)
+                            dream_date = datetime.strptime(date_str, '%d %B, %Y')
+                            if start_date <= dream_date <= end_date:
+                                day_str = dream_date.strftime('%Y-%m-%d')  # Use string date for dictionary keys
+                                dream_entries[day_str] += 1
+                        except ValueError:
+                            pass  # Skip if date format is invalid
+
+        # Prepare the list of all days within the specified range
+        all_days = []
+        current_date = start_date
+        while current_date <= end_date:
+            all_days.append(current_date.strftime('%Y-%m-%d'))
+            current_date += timedelta(days=1)
+
+        # Ensure every day is represented, even those with no dream entries
+        for day in all_days:
+            if day not in dream_entries:
+                dream_entries[day] = 0  # Set entry count to 0 for days with no dreams
+
+        # Calculate the total number of entries in the range
+        total_entries = sum(dream_entries.values())
+
+        # Prepare the data for plotting
+        days = sorted(dream_entries.keys())  # Sorted list of days
+
+        if not days:
+            console.print(f"[yellow]No Dreams Recorded in the selected range[/yellow]\n")
+            return  # Early exit if no dreams in the selected range
+
+        # Define color scale based on the number of entries
+        def get_color(entry_count):
+            color_scale = [
+                "#B38DFF",  # 1 entry: Darker purple (not too light)
+                "#9A67E4",  # 2 entries: Slightly darker purple
+                "#7E3AC1",  # 3 entries: Darker purple
+                "#6C24B2",  # 4 entries: Even darker purple
+                "#5A1A9E",  # 5 entries: Darkest purple
+                "#E0E0E0"   # 0 entries: Light gray (for empty days)
+            ]
+            return color_scale[min(entry_count, 5)]  # Ensure no more than 5 colors, gray for 0 entries
+
+        # Set up the plot
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Set the background color to white
+        fig.patch.set_facecolor('white')  # Background of the entire figure
+        ax.set_facecolor('white')  # Background of the plotting area
+
+        # Plotting the dream entries (bars or lines with varying colors based on number of entries)
+        if graph_type == "line":
+            # Prepare x and y values for the line graph
+            x_vals = days
+            y_vals = [dream_entries[day] for day in days]
+
+            # Plot the line graph with color based on the number of entries for each point
+            for i, day in enumerate(x_vals):
+                entry_count = y_vals[i]
+                color = get_color(entry_count)
+                ax.plot(day, entry_count, marker='o', markersize=5, color=color, label=f'{entry_count} entry(s)' if i == 0 else "")
+        else:
+            # Plotting as bars for bar graph
+            for day in days:
+                entry_count = dream_entries[day]
+                color = get_color(entry_count)
+                ax.bar(day, entry_count, label=f'{entry_count} entry(s)', color=color, width=0.5, alpha=0.7, edgecolor='black', linewidth=1)
+
+        # Labeling
+        ax.set_xlabel('Date', color='black')
+        ax.set_ylabel('Number of Entries', color='black')
+        ax.set_title(f'Dream Entries from {start_month}/{start_year} to {end_month}/{end_year}: [{total_entries} total dreams]', color='black')
+        ax.set_xticks(days)
+        ax.set_xticklabels(days, rotation=45, color='black')
+
+        # Make grid lines white and make them visible
+        ax.grid(True, color='black', linestyle='--', linewidth=0.5)
+
+        # Set the ticks' color to black
+        ax.tick_params(axis='both', labelcolor='black')
+
+        # Set the axis lines to black
+        ax.spines['top'].set_color('black')
+        ax.spines['right'].set_color('black')
+        ax.spines['bottom'].set_color('black')
+        ax.spines['left'].set_color('black')
+
+        # Adjust layout and show the plot
+        plt.tight_layout()
+        plt.show()
+   
     def sync(self):
         """
         Sync loads a .txt file and reads all the contents. It then
