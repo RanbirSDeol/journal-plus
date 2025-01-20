@@ -12,10 +12,16 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.imports import *
 
+console = Console()
+
 class Login:
     def __init__(self):
         self.console = Console()
         self.settings_file = os.path.join(os.path.dirname(__file__), "../settings.json")  # Corrected path to settings.json
+    
+    def print_panel(self, content, color, style, width):
+        panel = Panel(f"[{color}]{content}[/{color}]", style=f"bold {style}", width=width)
+        console.print(panel)
     
     def load_settings(self):
         """Loads settings from the settings file."""
@@ -34,7 +40,9 @@ class Login:
         
         stored_pin = settings["pin"]
 
-        entered_pin = Prompt.ask("Enter your PIN", password=True)
+        console.clear()
+        self.print_panel("Enter your PIN", "bold white", "white", 18)
+        entered_pin = Prompt.ask("", show_default=False, password=True)
         
         if entered_pin == stored_pin:
             return True

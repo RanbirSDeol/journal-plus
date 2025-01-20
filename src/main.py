@@ -8,7 +8,7 @@ from utils.imports import *
 
 # Constants
 PROGRAM_TITLE = f"Journal Plus"  # Global program title
-LOADING_SPEED = 0.00005
+LOADING_SPEED = 0.005
 
 # Function to load our settings json file
 def load_settings(file_path):
@@ -60,6 +60,10 @@ def print_unknown(input_command):
     unknown_command = Panel(f"[bold red]Unknown Command[/bold red]: {input_command}", expand=False)
     console.print(unknown_command)
 
+def print_panel(content, color, style, width):
+    panel = Panel(f"[{color}]{content}[/{color}]", style=f"bold {style}", width=width)
+    console.print(panel)
+
 # Function to login the user using their pin
 def login():
     """Main login loop"""
@@ -71,8 +75,10 @@ def login():
         if not logged_in:    
             clear()
             # Prompt user to either try again or quit
-            console.print("[bold red]Incorrect PIN![/bold red]")
-            user_input = Prompt.ask("[bold yellow]Enter 'q' to quit or press 'enter' to try again[/bold yellow]", default="")
+            print_panel("Incorrect PIN!", "bold red", "red", 18)
+            print_panel("Enter 'q' to quit or press 'enter' to try again: ", "white", "white", 38)
+            user_input = Prompt.ask("", show_default=False)
+            
             if user_input.lower() == 'q':
                 console.print("[bold red]Exiting program...[/bold red]")
                 break  # Exit the loop if user presses 'q'
@@ -114,14 +120,18 @@ def display_help():
     
     table.add_row("", "")
     
+    # Console commands
+    table.add_row("[green]'logs'[/green]", "Display your logs")
     table.add_row("[red]'clr_logs'[/red]", "Clear your logs")
     
     table.add_row("", "")
-
-    # Console commands
-    table.add_row("[green]'logs'[/green]", "Display your logs")
+    
     table.add_row("[green]'help'[/green]", "Display the help menu")
     table.add_row("[green]'clear'[/green]", "Clear your terminal")
+    
+    table.add_row("", "")
+    
+    table.add_row("[blue]'update'[/blue]", "Update the program")
     table.add_row("[green]'quit'[/green]", "Quit the program")
 
     # Print the table
@@ -152,6 +162,31 @@ def journal():
     # Once completed show title again to alert user they're in the hub
     print_title()
    
+# Function to update the program
+def update():
+    # Create a Progress bar instance
+    with Progress() as progress:
+        # Add the task with a description
+        clear()
+        task = progress.add_task("[cyan]Updating repository...", total=100)
+
+        # Execute git fetch to get the latest updates
+        subprocess.run(["git", "fetch"], check=True)
+
+        # Simulate progress update
+        while not progress.finished:
+            progress.update(task, advance=10)
+            time.sleep(0.5)
+
+        # After fetch, perform a pull to update the working directory
+        subprocess.run(["git", "pull"], check=True)
+
+        # Complete the progress bar
+        progress.update(task, completed=100)
+
+        console.log("[bold green]Program updated successfully![/bold green]")
+        time.sleep(2)
+   
 # Function to exit the program 
 def quit_program():
     clear()
@@ -173,6 +208,7 @@ def handle_commands(input_command):
         "help": display_help,
         "clear": clear_terminal,
         "quit": quit_program,
+        "update": update,
         "q": quit_program # shortcut
     }
 
