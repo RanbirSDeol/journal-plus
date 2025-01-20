@@ -1238,7 +1238,7 @@ class DreamHandler:
             logs.log("ERROR", f"[bold red]Failed to sync dreams[/bold red]: {e}")
 
         # Log the total files created
-        logs.log("SUCCESS", f"[bold green]Sync.txt Was Loaded! Files Created [/bold green]: {files_created_count}")
+        logs.log("SUCCESS", f"[bold green]'sync-dream.txt' Was Loaded! Files Created [/bold green]: {files_created_count}")
     
     def send_email(self, file_path):
         '''

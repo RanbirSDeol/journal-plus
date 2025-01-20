@@ -86,7 +86,7 @@ def login():
             # Create a Progress object
             clear()
             with Progress() as progress:
-                task = progress.add_task("[cyan]Logging in...", total=100)
+                task = progress.add_task("[white]Logging in...", total=100)
                 
                 # Simulate some work (this will update the progress bar)
                 while not progress.finished:
@@ -164,11 +164,13 @@ def journal():
    
 # Function to update the program
 def update():
+    logs.log("UPDATE", f"Attemping Update!")
+    
     # Create a Progress bar instance
     with Progress() as progress:
         # Add the task with a description
         clear()
-        task = progress.add_task("[cyan]Updating repository...", total=100)
+        task = progress.add_task("[white]Updating repository...", total=100)
 
         # Execute git fetch to get the latest updates
         subprocess.run(["git", "fetch"], check=True)
@@ -176,7 +178,7 @@ def update():
         # Simulate progress update
         while not progress.finished:
             progress.update(task, advance=10)
-            time.sleep(0.5)
+            time.sleep(0.1)
 
         # After fetch, perform a pull to update the working directory
         subprocess.run(["git", "pull"], check=True)
@@ -184,8 +186,11 @@ def update():
         # Complete the progress bar
         progress.update(task, completed=100)
 
-        console.log("[bold green]Program updated successfully![/bold green]")
-        time.sleep(2)
+        
+    logs.log("UPDATE", f"[bold green]Update Success![/bold green]")
+    console.log("[bold green]Program updated successfully![/bold green]")
+    time.sleep(1)
+    clear()
    
 # Function to exit the program 
 def quit_program():
