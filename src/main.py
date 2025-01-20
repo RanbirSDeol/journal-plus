@@ -163,44 +163,46 @@ def journal():
    
 # Function to update the program
 def update():
-    logs.log("UPDATE", f"Attempting Update!")
-
+    print("UPDATE", f"Attempting Update!")
+    
     # Create a Progress bar instance
     with Progress() as progress:
         # Add the task with a description
         clear()
         task = progress.add_task("[white]Updating repository...", total=100)
 
-        # Execute git fetch to get the latest updates
-        subprocess.run(["git", "fetch"], check=True)
-
-        # Simulate progress update
-        while not progress.finished:
-            progress.update(task, advance=10)
-            time.sleep(0.1)
-
-        # After fetch, perform a pull to update the working directory
+        # First, try to discard any changes in the .pyc files before pulling
         try:
-            result = subprocess.run(
-                ["git", "pull"],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
-            )
-            print(result.stdout.decode())
-            print(result.stderr.decode())
+            # List all the directories with .pyc files
+            pycache_dirs = [
+                "../src/logic/__pycache__/",
+                "../src/services/__pycache__/",
+                "../src/models/__pycache__/",
+                "../src/utils/__pycache__/"
+            ]
+            
+            # Discard changes to .pyc files in each directory
+            for pycache_dir in pycache_dirs:
+                subprocess.run(["git", "checkout", "--", pycache_dir], check=True)
+
+            # Now fetch the latest updates
+            subprocess.run(["git", "fetch"], check=True)
+
+            # Simulate progress update
+            while not progress.finished:
+                progress.update(task, advance=10)
+                time.sleep(0.1)
+
+            # After fetch, perform a pull to update the working directory
+            subprocess.run(["git", "pull"], check=True)
+
+            # Complete the progress bar
+            progress.update(task, completed=100)
+            
+            print("[bold green]Update Success![/bold green]")  # For success message
+            clear()  # Clean the console
         except subprocess.CalledProcessError as e:
-            logs.log("UPDATE", f"[bold red]Update failed with error: {e.stderr.decode()}[/bold red]")
-            console.log(f"[bold red]Error during git pull: {e.stderr.decode()}[/bold red]")
-            return
-
-        # Complete the progress bar
-        progress.update(task, completed=100)
-
-    logs.log("UPDATE", f"[bold green]Update Success![/bold green]")
-    console.log("[bold green]Program updated successfully![/bold green]")
-    time.sleep(1)
-    clear()
+            print(f"[bold red]Error occurred while updating: {e}[/bold red]")
    
 # Function to exit the program 
 def quit_program():
