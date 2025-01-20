@@ -24,6 +24,7 @@ from email import encoders
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.imports import *
 from .models.dream import Dream
+from .utils import Helpers
 
 # Settings.json
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -119,7 +120,7 @@ class DreamHandler:
         """Function to navigate through our dream journal"""
         
         # Our files
-        dream_files = self.list_files(self.journal_dir)[::-1]
+        dream_files = Helpers.list_files(self.journal_dir)[::-1]
 
         # Make sure we have dream files
         if not dream_files:
@@ -213,7 +214,7 @@ class DreamHandler:
             self.print_prompt(command)
 
             # Ask user for input
-            user_command = self.getch().lower()
+            user_command = Helpers.getch().lower()
             command = user_command
 
             # Next File
@@ -231,14 +232,14 @@ class DreamHandler:
                 TerminalClear.clear()
                 self.print_title()
                 self.create_dream()
-                dream_files = self.list_files(self.journal_dir)[::-1]
+                dream_files = Helpers.list_files(self.journal_dir)[::-1]
                 index = len(dream_files) - 1
             
             # Edit File
             elif user_command == "e" and dream_files:
                 self.print_prompt(user_command)
                 self.edit_dream(dream_files[index])
-                dream_files = self.list_files(self.journal_dir)[::-1]
+                dream_files = Helpers.list_files(self.journal_dir)[::-1]
                 
             # Index File
             elif user_command == "i" and dream_files:
@@ -264,7 +265,7 @@ class DreamHandler:
                 # Check if the entered number matches the generated number
                 if user_input == str(random_number):
                     self.delete_dream(dream_files[index])
-                    dream_files = self.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
+                    dream_files = Helpers.list_files(self.journal_dir)[::-1] # Re-fetch the dream files after deletion
                     index = index - 1
             
             # Sync Files
@@ -277,10 +278,10 @@ class DreamHandler:
                     clear()
                     self.print_prompt(user_command)
                     self.sync()  # Proceed with syncing
-                    dream_files = self.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
+                    dream_files = Helpers.list_files(self.journal_dir)[::-1]  # Re-fetch the dream files after syncing
                 else:
                     console.print("[bold yellow]Sync canceled.[/bold yellow]")
-                dream_files = self.list_files(self.journal_dir)[::-1]   
+                dream_files = Helpers.list_files(self.journal_dir)[::-1]   
                       
             # Find Files
             elif user_command == "f" and dream_files:
@@ -290,7 +291,7 @@ class DreamHandler:
                 
                 # Gather a list of files that match the search phrase along with their original index
                 matching_files = []
-                for index, file in enumerate(self.list_files(self.journal_dir)):
+                for index, file in enumerate(Helpers.list_files(self.journal_dir)):
                     with open(file, 'r') as f:
                         content = f.read()
                         # Use a regex to match whole words only (case-insensitive)
@@ -402,7 +403,7 @@ class DreamHandler:
                         console.print(command_table)
 
                         # Ask user for input
-                        user_command = self.getch().lower()
+                        user_command = Helpers.getch().lower()
 
                         # Handle navigation commands
                         if user_command == 'n':
@@ -647,7 +648,7 @@ class DreamHandler:
                         )
                         
                         # We'll split our date, to check if it is valid
-                        day, month, year = self.date_formatter(entry['Date'], False, False).split('-')
+                        day, month, year = Helpers.date_formatter(entry['Date'], False, False).split('-')
                         
                         date_str = f"{day}-{month}-{year}"  # "17-01-2024"
                         
@@ -758,7 +759,7 @@ class DreamHandler:
         '''
 
         # Let us get all the dream files
-        dream_files = self.list_files(self.journal_dir)
+        dream_files = Helpers.list_files(self.journal_dir)
 
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         backup_file_name = f"[{timestamp}]_Dream_Backup.txt"
@@ -800,190 +801,3 @@ class DreamHandler:
     def run(self):
         """Main loop for the Dream journal."""
         self.navigate()
-     
-    # TODO: Turn these all into a utils package, we'll need these for the journal handler as well
-     
-    # Get the date from a file
-    def extract_date_from_file(self, file_path):
-        """
-        A function that extracts the dream date from a file
-
-        Arguments:
-            file_path (str): The files path, so that we can read it
-            
-        Returns:
-            The date, if we have it inside the file, othewise return 'DirtyEntry',
-            so that we don't accidentally crash the program
-        """
-        try:
-            # Pattern to match date after inital '|'
-            # Eg. [ (Title) | (X) ]
-            date_pattern = r"\[.*\| (.*) \]" 
-
-            # We'll then open that file in read mode
-            with open(file_path, 'r') as file:
-                
-                # Read the content
-                content = file.read()
-
-                # Check if we have the date pattern inside the content
-                match = re.search(date_pattern, content)
-                if match:
-                    # Let's return the date
-                    return match.group(1)
-                else:
-                    # Throw an error if the date is missing, and log it
-                    print("───────────────────────────────────────────────────────────────────────")
-                    return 'DirtyEntry'
-                
-        # We've caught an error
-        except Exception as e:
-            print("───────────────────────────────────────────────────────────────────────")
-            return 'DirtyEntry' 
-    
-    # Formats the date
-    def date_formatter(self, date_unformatted, flipped, bracketBug):
-        """
-        Formatting a date into the numerical version:
-        eg. [Day Month, Year] -> [YYYY/MM/DD] (1) | Or [Month Day, Year] -> [YYYY/MM/DD] (2)
-        (1) is used for creation, (2) is used for the syncing [backup file is in month day]
-
-        Arguments:
-            date_unformatted (str): The unformatted date
-            flipped (bool): If we either want (1) True or (2) False
-            
-        Returns:
-            The date formatted in the method requested, or 'DirtyEntry', meaning that the string was malformed
-        """
-
-        try: 
-
-            # Splitting date using ','
-            parts = date_unformatted.split(',')
-
-            # Variables to store our formatted day, month, and year
-            day = ''
-            month = ''
-            year = ''
-
-            # Checking if we have a split of 2 parts [Day Month, Year]
-            if len(parts) == 2:
-                # We have [Month Day, Year]
-                
-                if flipped:
-                    # Getting the day and month, also removing the starting '('
-                    day_month = parts[0].strip().removeprefix('(')
-                    # Getting the year
-                    year = parts[1].strip()
-
-                    print(year)
-                    
-                    # Extracting day and month
-                    day_month_parts = day_month.split()
-
-                    # Checking if we have two parts
-                    if len(day_month_parts) == 2:
-                        # Our month
-                        month = day_month_parts[0].strip()
-                        # Our day
-                        day = day_month_parts[1].strip() 
-                        # Checking if we have a valid month
-                        if month in MONTHS_REVERSED:
-                            if day.isdigit() and 1 <= int(day) <= 31:
-                                formatted_date = f"{year}-{MONTHS_REVERSED[month]}-{day}"
-                                return formatted_date
-                            
-                # We have [Day Month, Year]
-                else:
-                    # Getting the day and month, and removing the starting '('
-                    day_month = parts[0].strip().removeprefix('(')
-                    # The year, minus a ')' bracket at the end
-                    if bracketBug:
-                        year = parts[1].strip()[:-1]
-                    else:
-                        year = parts[1].strip()
-                    
-                    # Extracting day and month
-                    day_month_parts = day_month.split()
-
-                    # Checking if we have a valid split
-                    if len(day_month_parts) == 2:
-                        # Day part
-                        day = day_month_parts[0].strip()  
-                        # Month part  
-                        month = day_month_parts[1].strip()
-                        
-                        # Checking if this month exists
-                        if month in MONTHS_REVERSED:
-                            if day.isdigit() and 1 <= int(day) <= 31:
-                                formatted_date = day + "-" + str(MONTHS_REVERSED[month]) + "-" + year
-                                return formatted_date
-
-        # Return error and 'DirtyEntry', also log the error
-        except Exception as e:
-            return 'DirtyEntry'
-        
-        # We got to the end without raising an error or returing
-        # Throw an error and return 'DirtyEntry'
-        return 'DirtyEntry'
-    
-    # Lists all the files in a directory
-    def list_files(self, directory):
-        """
-        A function to list all text files in a directory structure.
-        Ensures files are sorted in the correct order:
-        - By year (newest to oldest)
-        - By month (newest to oldest)
-        - By day (newest to oldest)
-        - By creation time (latest to earliest within the same day).
-        """
-
-        # List to store files with metadata
-        files = []
-
-        # Loop through all files in the directory structure
-        for root, _, file_names in os.walk(directory):
-            for file_name in file_names:
-                if file_name.endswith(".txt"):
-                    # Full file path
-                    file_path = os.path.join(root, file_name)
-
-                    # Extract date components from the directory structure (YEAR/MONTH_NAME/DAY)
-                    parts = os.path.normpath(root).split(os.sep)
-                    try:
-                        # Assuming directory structure: YEAR/MONTH_NAME/DAY
-                        year = int(parts[-3])
-                        month = datetime.strptime(parts[-2], "%B").month  # Convert month name to number
-                        day = int(parts[-1])
-                        file_date = datetime(year, month, day)
-                    except (IndexError, ValueError):
-                        # Default to the earliest possible date if parsing fails
-                        file_date = datetime.min
-
-                    # Get the file's creation time (or modification time if needed)
-                    creation_time = os.path.getctime(file_path)
-
-                    # Append the file with its metadata
-                    files.append((file_date, creation_time, file_path))
-
-        # Sort files:
-        # - By file date (newest to oldest)
-        # - By creation time (latest to earliest within the same date, includes microseconds)
-        files.sort(
-            key=lambda entry: (entry[0], -entry[1]),  # Negate creation time for descending order
-            reverse=True
-        )
-
-        # Return only the file paths in the sorted order
-        return [file_path for _, _, file_path in files]
-
-    # Function to get instant input
-    def getch(self):
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setraw(sys.stdin.fileno())
-            ch = sys.stdin.read(1)
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-        return ch
