@@ -62,6 +62,21 @@ logs = Logger(settings_file=settings_file_path)
 def clear():
     console.clear()
 
+def get_color_for_percent(percent):
+    # Convert the percent to an integer for comparison
+    percent = int(percent)
+    
+    # Calculate red and green values for the HEX color
+    red = int((percent / 10) * 255)  # Gradually increase red as percent increases
+    green = 255 - red  # Decrease green as percent increases
+
+    # Convert red and green values to two-digit HEX
+    red_hex = format(red, '02x')  # Format as two-digit hexadecimal
+    green_hex = format(green, '02x')  # Format as two-digit hexadecimal
+
+    # Return the HEX color as a string
+    return f"#{red_hex}{green_hex}00"
+
 class DreamHandler:
     def __init__(self):
         self.journal_dir = JOURNAL_DIR
@@ -240,12 +255,18 @@ class DreamHandler:
                     console.print(title_table)
                     console.print(stats_table)
                     console.print(content_panel)
-                    if (dream.tags):
-                        for tag, percent in dream.tags:
+                    if dream.tags:
+                        # Sort the tags based on the percentage, converting them to integers for sorting
+                        sorted_tags = sorted(dream.tags, key=lambda x: int(x[1]), reverse=False)
+
+                        # Add rows for each tag, now sorted by percentage
+                        for tag, percent in sorted_tags:
+                            color = get_color_for_percent(percent)
                             if percent == "0":
-                                tags_table.add_row(tag, f"{percent}%")
+                                tags_table.add_row(tag, f"[{color}]{percent}%[/{color}]")
                             else:
-                                tags_table.add_row(tag, f"{percent}0%")
+                                tags_table.add_row(tag, f"[{color}]{percent}0%[/{color}]")
+                        
                         console.print(tags_table)
                 except Exception as e:
                     logs.log("ERROR", f"[bold red]Error reading file: {os.path.basename(dream_file)} - {str(e)}[/bold red]")
