@@ -251,6 +251,12 @@ class DreamHandler:
                     stats_table.add_row("Sleep Cycle", sleep_cycle)
 
                     console.print(stats_table)
+                    
+                    tags_table = Table(border_style="white", box=box.SQUARE, width=75)
+                    tags_table.add_column("Dream Signs", justify="left", style="bold white", width=65)
+                    tags_table.add_column("Chance", justify="center", style="white", width=10)
+
+                    dream.entry = re.sub(r'\{(.*?):(\d+)\}', '', dream.entry).strip()
 
                     # Panel for the dream content
                     content_panel = Panel(
@@ -268,6 +274,13 @@ class DreamHandler:
                     console.print(title_table)
                     console.print(stats_table)
                     console.print(content_panel)
+                    if (dream.tags):
+                        for tag, percent in dream.tags:
+                            if percent == "0":
+                                tags_table.add_row(tag, f"{percent}%")
+                            else:
+                                tags_table.add_row(tag, f"{percent}0%")
+                        console.print(tags_table)
                 except Exception as e:
                     logs.log("ERROR", f"[bold red]Error reading file: {os.path.basename(dream_file)} - {str(e)}[/bold red]")
 
@@ -1314,7 +1327,7 @@ class DreamHandler:
 
         # Checking if we have any dreams
         if not dream_files:
-            logs.log(f"\n[bold yellow]No Dream Entries Found To Backup[/bold yellow]\n")
+            logs.log("WARNING", f"\n[bold yellow]No Dream Entries Found To Backup[/bold yellow]\n")
         else:
             for file_path in dream_files:
                 with open(file_path, 'r') as file:

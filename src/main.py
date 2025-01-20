@@ -180,7 +180,7 @@ def main():
         print_prompt()
 
         # Ask user for input
-        user_command = Prompt.ask("", default="", show_default=False)
+        user_command = Prompt.ask("", default="", show_default=False).lower()
         
         clear()
         print_title()

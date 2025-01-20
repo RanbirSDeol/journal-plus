@@ -17,10 +17,11 @@ class Dream:
         self.tags = self.extract_tags(entry)
 
     def extract_tags(self, entry):
-        """Extract tags from the dream entry."""
-        # Use a regular expression to find all occurrences of tags like -[TAG]-
-        tags = re.findall(r'-\[(.*?)\]-', entry)
-        return tags
+        """Extract tags in the format {Tag:PERCENT} from the dream entry."""
+        # Use a regular expression to find occurrences of {Tag:PERCENT}
+        tags = re.findall(r'\{(.*?):(\d+)\}', entry)
+        # Return the list of tags with their respective percentages as a tuple (Tag, PERCENT)
+        return [(tag, percent) for tag, percent in tags]
     
     def load_dream_from_file(dream_file_path):
         """Load a dream from a saved file and return the Dream object."""
@@ -78,4 +79,4 @@ Sleep Cycle: {self.sleep_cycle}
             tags = cls.extract_tags(cls, entry)
             return cls(title, dream_type, technique, sleep_cycle, entry, date=date, tags=tags)
         except Exception as e:
-            raise ValueError(f"???")
+            raise ValueError(f"Error reading file: {e}")
