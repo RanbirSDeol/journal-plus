@@ -44,7 +44,7 @@ logs = Logger(settings_path)
 
 # Panels
 def print_title():
-    title = Panel(PROGRAM_TITLE, style="bold white", width=15)
+    title = Panel(PROGRAM_TITLE, style="bold #F8B195", width=16)
     console.print(title)
 
 def print_prompt():
@@ -53,7 +53,7 @@ def print_prompt():
     console.print(prompt)
     
 def print_command(user_command):
-    panel = Panel(f"[bold green]Command[/bold green]: {user_command}", expand=False)
+    panel = Panel(f"[bold white]Command[/bold white]: {user_command}", expand=False)
     console.print(panel)
 
 def print_unknown(input_command):
@@ -171,19 +171,41 @@ def update():
         clear()
         task = progress.add_task("[white]Updating repository...", total=100)
 
-        # First, try to discard any changes in the .pyc files before pulling
+        # List all the directories with .pyc files
+        pycache_dirs = [
+            "logic/__pycache__/",
+            "services/__pycache__/",
+            "logic/models/__pycache__/",
+            "utils/__pycache__/"
+        ]
+        
         try:
-            # List all the directories with .pyc files
-            pycache_dirs = [
-                "../src/logic/__pycache__/",
-                "../src/services/__pycache__/",
-                "../src/models/__pycache__/",
-                "../src/utils/__pycache__/"
-            ]
-            
-            # Discard changes to .pyc files in each directory
+            # Absolute path for repo root (adjust if necessary)
+            repo_root = os.path.abspath(os.path.dirname(__file__))
+
+            # Manually remove .pyc files from the directories
             for pycache_dir in pycache_dirs:
-                subprocess.run(["git", "checkout", "--", pycache_dir], check=True)
+                full_path = os.path.join(repo_root, pycache_dir)
+                
+                # Ensure the directory exists
+                if os.path.exists(full_path):
+                    # Walk through the directory and remove .pyc files
+                    for root, dirs, files in os.walk(full_path):
+                        for file in files:
+                            if file.endswith(".pyc"):
+                                os.remove(os.path.join(root, file))  # Delete the .pyc file
+                else:
+                    print(f"[bold yellow]Warning: {full_path} does not exist.[/bold yellow]")
+
+            # Change to the parent directory (where the .git repo is located)
+            parent_directory = os.path.dirname(repo_root)
+            os.chdir(parent_directory)  # Move to the parent directory
+
+            # Check if there are local changes that need to be committed or stashed
+            result = subprocess.run(["git", "diff", "--exit-code"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if result.returncode != 0:
+                print("[bold yellow]Warning: You have uncommitted changes. Stashing them for you...[/bold yellow]")
+                subprocess.run(["git", "stash"], check=True)  # Stash the changes
 
             # Now fetch the latest updates
             subprocess.run(["git", "fetch"], check=True)
@@ -241,16 +263,18 @@ def main():
     clear()
     print_title()
     
+    user_command = ""
+    
     while True:
         # Create a border with your prompt text inside
         print_prompt()
+        print_command(user_command)
 
         # Ask user for input
         user_command = Prompt.ask("", default="", show_default=False).lower()
         
         clear()
         print_title()
-        print_command(user_command)
         handle_commands(user_command)
 
 if __name__ == "__main__":
