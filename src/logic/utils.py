@@ -75,7 +75,7 @@ class Helpers:
     @staticmethod
     def list_files(directory):
         """
-        List all text files in a directory structure sorted by date and creation time.
+        List all text files in a directory structure sorted by year, month, day, and creation time.
 
         Arguments:
             directory (str): The directory to scan.
@@ -90,6 +90,7 @@ class Helpers:
                 if file_name.endswith(".txt"):
                     file_path = os.path.join(root, file_name)
 
+                    # Extract the date from the directory structure (year, month, day)
                     parts = os.path.normpath(root).split(os.sep)
                     try:
                         year = int(parts[-3])
@@ -99,10 +100,16 @@ class Helpers:
                     except (IndexError, ValueError):
                         file_date = datetime.min
 
+                    
+                    # Get the creation time using os.path.getctime
                     creation_time = os.path.getctime(file_path)
+
+                    # Append the file details to the list
                     files.append((file_date, creation_time, file_path))
 
-        files.sort(key=lambda entry: (entry[0], -entry[1]), reverse=True)
+        # Sort by file_date first, and if dates are the same, by creation time
+        files.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)  # Descending order
+
         return [file_path for _, _, file_path in files]
 
     @staticmethod

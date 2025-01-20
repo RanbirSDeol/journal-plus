@@ -1066,10 +1066,15 @@ class DreamHandler:
             # If we have a valid entry at the end of the file, append it to organized_entries
             if entry and entry["Body"]:
                 organized_entries.append(entry)
+                
+            # The fix to the reverse order bug :D
+            organized_entries.reverse()
 
             # Set up the loading bar using Rich
             with Progress() as progress:
                 task = progress.add_task("[cyan]Syncing dreams...", total=len(organized_entries))
+
+                count = 0
 
                 # Loop through the entries, and create a journal .txt for each
                 for entry in organized_entries:
@@ -1081,10 +1086,10 @@ class DreamHandler:
                         )
                         
                         # We'll split our date, to check if it is valid
-                        day, month, year = Helpers.date_formatter(entry['Date'], False, False).split('-')
+                        year, month, day = Helpers.date_formatter(entry['Date'], False, False).split('-')
                         
                         date_str = f"{day}-{month}-{year}"  # "17-01-2024"
-                        
+
                         date_obj = datetime.strptime(date_str, "%d-%m-%Y")
                         
                         month_name = date_obj.strftime("%B")
@@ -1125,6 +1130,7 @@ class DreamHandler:
                         # Check if the file name without the timestamp already exists
                         file_name_without_timestamp = (entry['Title']).replace(' ', '_')
 
+                        existing_file_base_names.reverse()
 
                         if file_name_without_timestamp in existing_file_base_names:
                             continue
