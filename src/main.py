@@ -109,20 +109,20 @@ def display_help():
     table.add_column("Description", justify="left")
 
     # Program commands
-    table.add_row("[purple]'dream'[/purple]", "Opens your dream journal")
-    table.add_row("[yellow]'journal'[/yellow]", "Opens your journal")
+    table.add_row("[purple]'dream'[/purple]", "Open your dream journal")
+    table.add_row("[yellow]'journal'[/yellow]", "Open your journal")
     
     table.add_row("", "")
     
-    table.add_row("[red]'clr_logs'[/red]", "Clears your logs")
+    table.add_row("[red]'clr_logs'[/red]", "Clear your logs")
     
     table.add_row("", "")
 
     # Console commands
-    table.add_row("[green]'logs'[/green]", "Displays your logs")
-    table.add_row("[green]'help'[/green]", "Displays the help menu")
-    table.add_row("[green]'clear'[/green]", "Clear the terminal")
-    table.add_row("[green]'quit'[/green]", "Exits the program")
+    table.add_row("[green]'logs'[/green]", "Display your logs")
+    table.add_row("[green]'help'[/green]", "Display the help menu")
+    table.add_row("[green]'clear'[/green]", "Clear your terminal")
+    table.add_row("[green]'quit'[/green]", "Quit the program")
 
     # Print the table
     console.print(table)

@@ -575,8 +575,6 @@ class DreamHandler:
             # Define the command to open the file in Emacs in the terminal
             TEXT_EDITOR.append(path)
             
-            logs.log("DEBUG", f"{TEXT_EDITOR}")
-            
             try:
                 # Use subprocess to open the file in Emacs
                 subprocess.run(TEXT_EDITOR, check=True)
@@ -824,7 +822,6 @@ class DreamHandler:
                         if i == 0:
                             # Extract the date using Helpers.extract_date_from_file
                             date_str = line.split("|")[1].strip().replace("(", "").replace(")", "").replace(" ]", "")
-                            logs.log("DEBUG", date_str)
                             try:
                                 # Parse the date format (e.g., 19 January, 2025)
                                 dream_dates.append(datetime.strptime(date_str, '%d %B, %Y'))
@@ -835,7 +832,6 @@ class DreamHandler:
             
             # Calculate the streak
             if dream_dates:
-                logs.log("DEBUG", f"DREAM DATES FOUND {dream_dates}")
                 dream_dates.sort()
                 streak = 1
                 max_streak = 1

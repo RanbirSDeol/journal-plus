@@ -180,7 +180,7 @@ class JournalHandler:
                 show_header=False, box=box.SQUARE, border_style="white", width=75
             )
             command_table.add_column("Command", justify="center", style="bold green")
-            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (b)ackup | (s)ync | (q)uit")
+            command_table.add_row("(c)reate | (d)elete | (n)ext | (p)rev | (f)ind | (i)ndex | (a)nalytics | (b)ackup | (s)ync | (q)uit")
             console.print(command_table)
             self.print_prompt(command)
 
@@ -375,6 +375,11 @@ class JournalHandler:
                         elif user_command == 'q':
                             break  # Exit the search navigation loop
             
+            # Statistics
+            
+            elif user_command == "a" and journal_files:
+                self.statistics()
+            
             # Backup Files
             elif user_command == "b" and journal_files:
                 # Ask for confirmation before syncing
@@ -406,8 +411,6 @@ class JournalHandler:
         if os.path.exists(path):
             # Define the command to open the file in Emacs in the terminal
             TEXT_EDITOR.append(path)
-            
-            logs.log("DEBUG", f"{TEXT_EDITOR}")
             
             try:
                 # Use subprocess to open the file in Emacs
@@ -562,64 +565,10 @@ class JournalHandler:
                     lines = file.readlines()
 
                     for i, line in enumerate(lines):
-                        # Color the journal types
-                        if i == 2 and "Lucid" in line:
-                            line = line.replace("Lucid", f"[#FFD700]Lucid[/#FFD700]")
-                        if i == 2 and "Vivid" in line:
-                            line = line.replace("Vivid", f"[#00FF00]Vivid[/#00FF00]")
-                        if i == 2 and "Nightmare" in line:
-                            line = line.replace("Nightmare", f"[#FF5733]Nightmare[/#FF5733]")
-                        if i == 2 and "Vague" in line:
-                            line = line.replace("Vague", f"[#708090]Vague[/#708090]")
-                        if i == 2 and "Vivimax" in line:
-                            line = line.replace("Vivimax", f"[#FF69B4]Vivimax[/#FF69B4]")
-                        if i == 2 and "No Recall" in line:
-                            line = line.replace("No Recall", f"[#A9A9A9]No Recall[/#A9A9A9]")
-                        if i == 2 and "Normal" in line:
-                            line = line.replace("Normal", f"[#FFFFFF]Normal[/#FFFFFF]")
-                        if i == 2 and "N/A" in line:
-                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
-                        if i == 2 and "IE" in line:
-                            line = line.replace("IE", f"[#FF8C00]IE[/#FF8C00]")
-
-                        # Color the journal techniques
-                        if i == 3 and "WILD" in line:
-                            line = line.replace("WILD", f"[#1E90FF]WILD[/#1E90FF]")
-                        if i == 3 and "MILD" in line:
-                            line = line.replace("MILD", f"[#ff0000]MILD[/#ff0000]")
-                        if i == 3 and "SSILD" in line:
-                            line = line.replace("SSILD", f"[#FF7F50]SSILD[/#FF7F50]")
-                        if i == 3 and "DILD" in line:
-                            line = line.replace("DILD", f"[#32CD32]DILD[/#32CD32]")
-                        if i == 3 and "N/A" in line:
-                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
-
-                        # Color the sleep cycles
-                        if i == 4 and "Regular" in line:
-                            line = line.replace("Regular", f"[gray]Regular[/gray]")
-                        if i == 4 and "WBTB" in line:
-                            line = line.replace("WBTB", f"[#00BFFF]WBTB[/#00BFFF]")
-                        if i == 4 and "Nap" in line:
-                            line = line.replace("Nap", f"[#9370DB]Nap[/#9370DB]")
-                        if i == 4 and "N/A" in line:
-                            line = line.replace("N/A", f"[#ff0000]N/A[/#ff0000]")
-
-                        # Update counters
-                        if i == 2:
-                            journal_types = line.split("Journal Type:")[1].strip().split(", ")
-                            journal_type_count.update(journal_types)
-                        elif i == 3:
-                            techniques = line.split("Technique:")[1].strip().split(", ")
-                            technique_count.update(techniques)
-                        elif i == 4:
-                            sleep_cycles = line.split("Sleep Cycle:")[1].strip().split(", ")
-                            sleep_cycle_count.update(sleep_cycles)
-
                         # Store the date of the journal entry (assuming the date is on line 1)
                         if i == 0:
                             # Extract the date using Helpers.extract_date_from_file
                             date_str = line.split("|")[1].strip().replace("(", "").replace(")", "").replace(" ]", "")
-                            logs.log("DEBUG", date_str)
                             try:
                                 # Parse the date format (e.g., 19 January, 2025)
                                 journal_dates.append(datetime.strptime(date_str, '%d %B, %Y'))
@@ -630,7 +579,6 @@ class JournalHandler:
             
             # Calculate the streak
             if journal_dates:
-                logs.log("DEBUG", f"DREAM DATES FOUND {journal_dates}")
                 journal_dates.sort()
                 streak = 1
                 max_streak = 1
@@ -649,9 +597,6 @@ class JournalHandler:
             clear()
             self.print_panel(f"Analytics", "bold green", "green", 13)
             self.print_panel(f"[bold #FFD700]Streak[/bold #FFD700]: {max_streak}", "bold white", "white", 15)
-            self.display_counter(journal_type_count, "Journal Type Counts")
-            self.display_counter(technique_count, "Technique Counts")
-            self.display_counter(sleep_cycle_count, "Sleep Cycle Counts")
             
             command_table = Table(
                 show_header=False, box=box.SQUARE, border_style="white", width=10
