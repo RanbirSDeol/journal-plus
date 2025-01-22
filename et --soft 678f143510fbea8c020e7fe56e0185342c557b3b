@@ -1,0 +1,167 @@
+[33mcommit b8ace226b4f67b864dac6f1e44746bd3747c273e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Wed Jan 22 13:26:08 2025 -0500
+
+    Reverted to using old date_formatter and list_files functions
+
+[33mcommit 805291809fe2c29b41e68dc4d0d8fead4a4d55ab[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Wed Jan 22 13:22:04 2025 -0500
+
+    Fix latest modified file overwritting current order
+
+[33mcommit 678f143510fbea8c020e7fe56e0185342c557b3b[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 18:45:30 2025 -0500
+
+    Implement exit on update, and make user reload the program
+
+[33mcommit 0fa5d7c9402ce1f306caa9b2d12354c622f02c00[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 18:42:56 2025 -0500
+
+    Fix update not updating, and change main program title color
+
+[33mcommit d591b65c3734205172ed5920a1c1527b0acebeb7[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 18:31:39 2025 -0500
+
+    Implement pycache update
+
+[33mcommit 2b1bfd2501c308688c6508bf5fa70e2dc7939572[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 18:27:03 2025 -0500
+
+    Fix login bypass bug
+
+[33mcommit c7115491efaa193062a26fce3f3d5ae5655a31dd[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 18:17:19 2025 -0500
+
+    Implement hex colors to signs table and add sorting of signs lowest to greatest
+
+[33mcommit 8d197ad70271c914f4a65e9c42d5d793af9fbf51[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 17:34:14 2025 -0500
+
+    Change UI colors for loading bar for login, and improve loading bars
+
+[33mcommit a64707a531f34dd7f40ff872a70222153adfa2df[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 17:27:51 2025 -0500
+
+    Implement program update function, and improve the login CLI
+
+[33mcommit bf16c9cca65d6ba4fb23cc7d984c00c3e1fdcc4a[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 17:12:17 2025 -0500
+
+    Minimal viable product created
+
+[33mcommit 11780ea3c950b7bfaf8801ff5291f7633ef1ebed[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 17:06:52 2025 -0500
+
+    Implement journal_handler, everything for it works, will add statistcs later, and fix for panel sizing.
+
+[33mcommit 04264fbf3a020f55c61f844d79d8d7b5aa0e0448[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 15:53:48 2025 -0500
+
+    Improve formatting and user input
+
+[33mcommit 8d9c06b43d8c49b3f44a5247809c17d86f3d6349[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 14:01:48 2025 -0500
+
+    Implement tagging system, format: {Sign:Percent} add anywhere in file, will be removed when displayed, but saved in file.
+
+[33mcommit 067d58e1ed1ed29a734dace8de8b86de56fee7fd[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 13:01:38 2025 -0500
+
+    Fix and refactor search, and add index of the search. Also implement coloring of values in journal.
+
+[33mcommit a13431d70cb109c90eab8befd7228c3285d10807[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Mon Jan 20 12:26:50 2025 -0500
+
+    Fix the incorrect order when syncing, and fix the list_files order.
+
+[33mcommit 9e218bde5090403264581ec810f53f180464419e[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 22:26:31 2025 -0500
+
+    Implement system to display statistics via matplotlib, for both lucid and normal dreams using a range
+
+[33mcommit 0d8452231fa39ebd5e4578d10deb38f419eac785[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 21:12:29 2025 -0500
+
+    Refactor entire dream_handler and add statistics
+
+[33mcommit 81425c6bf97a7de57595ffe69eff5f7c242f5c42[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 19:42:03 2025 -0500
+
+    Create a helper file with all our utility functions
+
+[33mcommit e846591086a3ec3ba0b4ad27dff95bc1b10c4dd6[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 18:49:43 2025 -0500
+
+    Remove empty .py files
+
+[33mcommit 42a62fc43230640bcbb38d6922ccba4ad224bf32[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 18:48:22 2025 -0500
+
+    Refactor delete_dream, send_email and backup
+
+[33mcommit c60655ef2e123b7cfea2db9fe765713a5b12b5b4[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 18:43:57 2025 -0500
+
+    Refactor sync and fix major sync and backup bugs
+
+[33mcommit 3dfa7f11ac27bb7d84222678050e36c62d38551a[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 18:01:02 2025 -0500
+
+    Refactor create dream and edit dream
+
+[33mcommit 7b53fa2a4534721ebfb3089dab7060c3a44fbbb2[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 17:50:35 2025 -0500
+
+    Refactor creating dreams code
+
+[33mcommit 921f49b2cfc8cbd69b5495f10d1feff0e6ea042d[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 17:43:29 2025 -0500
+
+    Refactor navigation
+
+[33mcommit fb6ad501285a8f79e2437a06eb00c221eca6152c[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 14:18:46 2025 -0500
+
+    Fix minor bugs in dream_handler
+
+[33mcommit ed1f756ba13398ca86a863844ef7fb0f1faed70c[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 13:33:17 2025 -0500
+
+    Fix backup bug with lines not matching
+
+[33mcommit c8964430c8e74d1e616a36bda785f7dc5fa42cf2[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 12:57:29 2025 -0500
+
+    Implement backing up of files, and maintain order when syncing.
+
+[33mcommit e34d048867edb04c76f1e8b03a8f9150c8840fe3[m
+Author: RanbirSDeol <ranbirs.deol17@gmail.com>
+Date:   Sun Jan 19 12:09:01 2025 -0500
+
+    Initial Commit

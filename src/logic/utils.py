@@ -4,6 +4,13 @@ import sys
 import termios
 import tty
 from datetime import datetime
+# Classes
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.imports import *
+# Settings.json
+script_dir = os.path.dirname(os.path.abspath(__file__))
+settings_file_path = os.path.join(script_dir, '..', 'settings.json')
+logs = Logger(settings_file=settings_file_path)
 
 # A dictionary to map month names to numbers for formatting purposes.
 MONTHS_REVERSED = {
@@ -31,7 +38,7 @@ class Helpers:
                 content = file.read()
                 match = re.search(date_pattern, content)
                 if match:
-                    return match.group(1)
+                    return match.group(1).replace("(", "")
                 else:
                     print("Date pattern not found in file.")
                     return 'DirtyEntry'
@@ -73,6 +80,22 @@ class Helpers:
         return 'DirtyEntry'
 
     @staticmethod
+    def extract_creation_time(file_name):
+        # Remove the file extension
+        file_base_name = os.path.splitext(file_name)[0]
+        
+        # Extract the last 13 digits and remove the underscores
+        last_13_digits = file_base_name[-13:].replace("_", "")
+        
+        try:
+            # Convert to an integer for comparison
+            creation_time = int(last_13_digits)
+        except ValueError:
+            creation_time = 0  # Default if conversion fails
+        
+        return creation_time
+
+    @staticmethod
     def list_files(directory):
         """
         List all text files in a directory structure sorted by year, month, day, and creation time.
@@ -99,16 +122,24 @@ class Helpers:
                         file_date = datetime(year, month, day)
                     except (IndexError, ValueError):
                         file_date = datetime.min
-
                     
-                    # Get the creation time using os.path.getctime
-                    creation_time = os.path.getctime(file_path)
+                    extracted_date = Helpers.extract_date_from_file(file_path).replace("(", "")
+                    extracted_date = extracted_date.replace(")", "")
+                    date_object = datetime.strptime(extracted_date, "%d %B, %Y")
+                    file_date = date_object.strftime("%d-%m-%Y")
+                    
+                    # Get the creation time using the extenstion
+                    creation_time = Helpers.extract_creation_time(file_name)
+                    
+                    logs.log("DEBUG", creation_time)
 
                     # Append the file details to the list
                     files.append((file_date, creation_time, file_path))
 
-        # Sort by file_date first, and if dates are the same, by creation time
-        files.sort(key=lambda entry: (entry[0], entry[1]), reverse=True)  # Descending order
+        files.sort(
+            key=lambda entry: (datetime.strptime(entry[0], "%d-%m-%Y"), entry[1]),
+            reverse=True
+        )
 
         return [file_path for _, _, file_path in files]
 
