@@ -130,8 +130,6 @@ class Helpers:
                     
                     # Get the creation time using the extenstion
                     creation_time = Helpers.extract_creation_time(file_name)
-                    
-                    logs.log("DEBUG", creation_time)
 
                     # Append the file details to the list
                     files.append((file_date, creation_time, file_path))
